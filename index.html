@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c0e11">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Címsorrend</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+:root{--bg:#0c0e11;--s1:#14171b;--s2:#1b1f25;--s3:#262b33;--ln:rgba(255,255,255,.08);--ln2:rgba(255,255,255,.16);--tx:#eef0f3;--mu:#8d97a5;--ac:#f4b740;--acd:#1a1405;--gr:#4ade80;--bl:#7cb4ff;--rd:#ff7b72;--r:14px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 Roboto,-apple-system,"SF Pro Text","Segoe UI",system-ui,sans-serif;overflow:hidden;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;touch-action:manipulation;transition:transform .09s,filter .09s,background .12s}
+button:active,.p{transform:scale(.94);filter:brightness(1.4)}
+.i{display:block;flex:none}
+#app{height:100dvh;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+main{flex:1;min-height:0;position:relative}
+.view{position:absolute;inset:0;display:none;flex-direction:column}.view.on{display:flex}
+.hd{display:flex;align-items:flex-end;justify-content:space-between;padding:14px 12px 10px 18px;flex:none}
+.hd h1{margin:0;font-size:28px;line-height:1.1;font-weight:650;letter-spacing:-.02em}
+.sb{color:var(--mu);font-size:13px;margin-top:3px;font-variant-numeric:tabular-nums}
+.tools{display:flex}
+.ib{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--tx)}
+.ib:active,.ib.p{background:rgba(255,255,255,.16);filter:none}.ib.on{color:var(--ac)}
+.prog{height:3px;background:var(--s2);margin:0 18px;border-radius:3px;overflow:hidden;flex:none}.prog i{display:block;height:100%;background:var(--ac);width:0;transition:width .35s}
+.scroll{flex:1;min-height:0;overflow:auto;padding:0 18px 28px;overscroll-behavior:contain}
+.b1,.b2{height:46px;padding:0 18px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600}
+.b1{background:var(--ac);color:var(--acd)}.b2{background:var(--s3);font-weight:500}
+.sm{height:40px;padding:0 14px;font-size:14px}.dg{color:var(--rd)}.b1.dg{background:var(--rd);color:#2a0a08}.wide{width:100%}
+input,textarea,select{width:100%;font:inherit;color:var(--tx);background:var(--s2);border:1px solid var(--ln);border-radius:12px;padding:13px 14px;outline:0}
+input:focus,textarea:focus,select:focus{border-color:var(--ac)}
+textarea{resize:none}
+.in{display:flex;align-items:center;background:var(--s2);border:1px solid var(--ln);border-radius:14px;padding:0 4px 0 14px;margin-top:8px}
+.in input{border:0;background:none;padding:15px 8px}.in:focus-within{border-color:var(--ac)}.in .i{color:var(--mu)}
+.in .rec{color:var(--rd);animation:pl 1s infinite}@keyframes pl{50%{opacity:.35}}
+.lbl{display:block;margin:18px 0 6px;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--mu)}
+.mu{color:var(--mu)}.c{text-align:center;padding:28px 8px}
+.rowi{display:flex;align-items:center;gap:14px;padding:14px 2px;border-bottom:1px solid var(--ln);width:100%;text-align:left}
+.rowi .t{flex:1;min-width:0}.rowi b{display:block;font-weight:500}.rowi small{display:block;color:var(--mu);font-size:13px}.rowi>.i{color:var(--mu)}
+.chip{display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:99px;background:var(--s3);color:var(--mu);margin:4px 4px 0 0}
+.chip.w{background:rgba(244,183,64,.14);color:var(--ac)}.chip.g{background:rgba(74,222,128,.13);color:var(--gr)}
+.se{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin:6px 0 4px;padding:12px 14px;border:1px solid var(--ln);border-radius:var(--r);background:var(--s1)}
+.se .sg{flex:1;min-width:0}.se .lab{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)}
+.se b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.se .ar{color:var(--mu)}
+.bn{display:flex;align-items:center;gap:12px;margin:10px 0;padding:12px 14px;border-radius:var(--r);background:rgba(244,183,64,.09);border:1px solid rgba(244,183,64,.35)}
+.bn div{flex:1;font-weight:500}.bn small{display:block;color:var(--mu);font-weight:400;font-size:13px}
+.sum{color:var(--mu);font-size:12.5px;margin:8px 2px 0}
+.tl{margin-top:10px}
+.sc{position:relative;display:flex;align-items:center;gap:8px;padding:20px 0 6px 52px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)}
+.sc::before{content:"";position:absolute;left:21px;top:0;bottom:0;width:2px;background:var(--ln2)}
+.sc em{font-style:normal;text-transform:none;letter-spacing:0;font-size:11px;color:var(--ac);border:1px solid rgba(244,183,64,.45);padding:1px 9px;border-radius:99px}
+.st{position:relative;display:grid;grid-template-columns:44px 1fr auto;align-items:center;background:var(--bg)}
+.st::before{content:"";position:absolute;left:21px;top:0;bottom:0;width:2px;background:var(--ln2)}
+.st.first::before{top:50%}.st.last::before{bottom:50%}
+.rl{position:relative;z-index:1;display:grid;place-items:center;height:100%}
+.nd{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:600;background:var(--bg);border:2px solid var(--ln2);color:var(--tx);font-variant-numeric:tabular-nums}
+.nd.fl{border-color:var(--bl);color:var(--bl)}.st.nx .nd,.nd.nx{background:var(--ac);border-color:var(--ac);color:var(--acd)}
+.st.dn .nd{border-color:var(--gr);color:var(--gr)}.st.dn .bd{opacity:.5}.st.dn .bd b{text-decoration:line-through}
+.st.br{padding-left:22px}.st.br::before{left:43px;background:rgba(244,183,64,.5)}
+.bd{padding:12px 6px;min-width:0}.bd b{display:block;font-weight:500;font-size:16px}.bd small{display:block;color:var(--mu);font-size:13.5px}
+.ck{width:44px;height:44px;border-radius:50%;border:2px solid var(--ln2);display:grid;place-items:center;color:transparent;margin-right:2px}
+.ck.on{background:var(--gr);border-color:var(--gr);color:#07210f}
+.ac{grid-column:1/-1;display:none;gap:8px;padding:0 0 12px 44px}.st.open .ac{display:flex}
+.st.lift{z-index:5;background:var(--s2);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.55)}
+.gr{touch-action:none;width:44px;height:44px;display:grid;place-items:center;color:var(--mu)}
+.dgb{display:flex;align-items:center}
+#nextbar{flex:none;padding:10px 18px 12px;background:rgba(12,14,17,.94);border-top:1px solid var(--ln)}
+.nb{display:flex;align-items:center;gap:12px}.nbt{flex:1;min-width:0}.nbt small{display:block;color:var(--mu);font-size:12px}
+.nbt b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tabs{display:flex;flex:none;border-top:1px solid var(--ln);background:var(--s1);padding-bottom:env(safe-area-inset-bottom)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;color:var(--mu);font-size:11.5px;font-weight:500}.tab.on{color:var(--ac)}
+.bk{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--ln)}
+.cb{width:44px;height:44px;display:grid;place-items:center;flex:none}
+.cb span{width:24px;height:24px;border-radius:7px;border:2px solid var(--ln2);display:grid;place-items:center;color:transparent}
+.cb.on span{background:var(--ac);border-color:var(--ac);color:var(--acd)}
+.bk .t{flex:1;min-width:0;padding:8px 0}.bk b{display:block;font-weight:500}.bk small{display:block;color:var(--mu);font-size:13px}
+#bookbar{flex:none;padding:10px 18px 12px;border-top:1px solid var(--ln);background:var(--s1);display:none;gap:10px}#bookbar>*{flex:1}
+#map{flex:1;position:relative;background:#1a2230}
+#map .maplibregl-canvas{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.7)}
+.mk{width:30px;height:30px;border-radius:50%;background:var(--ac);color:var(--acd);display:grid;place-items:center;font-size:13px;font-weight:700;border:2px solid #0c0e11;box-shadow:0 2px 8px rgba(0,0,0,.6)}
+.mk.fl{background:var(--bl)}.mk.dn{background:var(--gr);color:#07210f}.mk.br{background:#fff;color:#1a1405}
+#pickbar{display:none;align-items:center;gap:10px;padding:10px 14px;background:rgba(244,183,64,.12);border-bottom:1px solid rgba(244,183,64,.4);font-size:14px;flex:none}#pickbar span{flex:1}
+#msheet{position:absolute;left:10px;right:10px;bottom:10px;background:var(--s1);border:1px solid var(--ln2);border-radius:18px;padding:14px;display:none;z-index:5}
+#scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}#scrim.on{opacity:1;pointer-events:auto}
+#sheet{position:fixed;left:0;right:0;bottom:0;max-height:90dvh;overflow:auto;background:var(--s1);border-radius:22px 22px 0 0;border-top:1px solid var(--ln2);padding:8px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .26s cubic-bezier(.2,.8,.2,1);z-index:50}#sheet.on{transform:none}
+.grab{width:38px;height:4px;border-radius:4px;background:var(--ln2);margin:4px auto 14px}
+#sheet h3{margin:0 0 6px;font-size:19px;font-weight:600}
+.btns{display:flex;gap:10px;margin-top:16px}.btns>*{flex:1}
+.opt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:15px 4px;border-bottom:1px solid var(--ln);font-size:17px}.opt .i{color:var(--mu)}
+#page{position:fixed;inset:0;background:var(--bg);z-index:45;transform:translateX(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}#page.on{transform:none}
+.phd{display:flex;align-items:center;gap:4px;padding:8px 12px 8px 4px;border-bottom:1px solid var(--ln);flex:none}.pt{font-size:19px;font-weight:600}
+.pbody{flex:1;overflow:auto;padding:4px 18px 24px}.pfoot{flex:none;padding:10px 18px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--ln)}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 2px;border-bottom:1px solid var(--ln)}
+.tg{width:50px;height:30px;border-radius:30px;background:var(--s3);position:relative;flex:none}.tg::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s}.tg.on{background:var(--ac)}.tg.on::after{left:23px}
+#toast{display:none;position:fixed;left:16px;right:16px;bottom:calc(86px + env(safe-area-inset-bottom));background:#f4f5f7;color:#0c0e11;padding:12px 14px;border-radius:14px;gap:10px;align-items:center;z-index:70;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+#toast button{flex:none;background:#0c0e11;color:#fff;border-radius:9px;padding:8px 12px;font-weight:500}
+.maplibregl-ctrl-attrib{font-size:10px}
+</style></head><body>
+<div id="app"><main>
+<section class="view on" id="v-route">
+ <div class="hd"><div><h1>Mai út</h1><div class="sb" id="rt-sub"></div></div>
+  <div class="tools"><button class="ib" id="eb" onclick="setEdit(!EDIT)" aria-label="Átrendezés"></button><button class="ib" onclick="routeMenu()" aria-label="Menü"></button><button class="ib" onclick="openSettings()" aria-label="Beállítások"></button></div></div>
+ <div class="prog"><i id="rt-prog"></i></div>
+ <div class="scroll" id="rt-body"></div>
+ <div id="nextbar"></div>
+</section>
+<section class="view" id="v-add">
+ <div class="hd"><div><h1>Hozzáadás</h1><div class="sb">Gépeld, mondd be vagy jelöld a térképen</div></div></div>
+ <div class="scroll"><div class="in"><span id="ic-s"></span><input id="q" placeholder="Cím vagy vevő neve" autocomplete="off" enterkeyhint="search"><button class="ib" id="mic" onclick="voice('q')" aria-label="Hang"></button><button class="ib" id="pinb" onclick="pickNew()" aria-label="Térkép"></button></div>
+ <div id="sug"></div><div id="quick"></div></div>
+</section>
+<section class="view" id="v-map">
+ <div class="hd"><div><h1>Térkép</h1><div class="sb" id="mp-sub"></div></div><div class="tools"><button class="ib" id="mpin" onclick="pickNew()" aria-label="Új pont"></button><button class="ib" id="mloc" onclick="locateMe()" aria-label="Helyem"></button><button class="ib" id="mfit" onclick="mapDraw(true)" aria-label="Mind"></button></div></div>
+ <div id="pickbar"><span id="pickmsg"></span><button class="b2 sm" onclick="cancelPick()">Kész</button></div>
+ <div id="map"></div><div id="msheet"></div>
+</section>
+<section class="view" id="v-book">
+ <div class="hd"><div><h1>Címjegyzék</h1><div class="sb" id="bk-sub"></div></div><div class="tools"><button class="ib" id="bcam" onclick="$('#ocrF').click()" aria-label="Fénykép"></button><button class="ib" id="bpaste" onclick="pasteDlg()" aria-label="Szöveg"></button></div></div>
+ <div style="padding:0 18px"><div class="in"><span id="ic-s2"></span><input id="bq" placeholder="Keresés a címjegyzékben" autocomplete="off"><button class="ib" id="mic2" onclick="voice('bq')" aria-label="Hang"></button></div></div>
+ <div class="scroll" id="bk-body" style="padding-top:6px"></div>
+ <div id="bookbar"><button class="b2" onclick="selClear()">Törlés</button><button class="b1" id="bkadd" onclick="selAdd()"></button></div>
+</section>
+</main>
+<nav id="tabs"><button class="tab on" data-t="route" onclick="go('route')"></button><button class="tab" data-t="add" onclick="go('add')"></button><button class="tab" data-t="map" onclick="go('map')"></button><button class="tab" data-t="book" onclick="go('book')"></button></nav>
+</div>
+<div id="scrim" onclick="closeSheet()"></div><div id="sheet"></div><div id="page"></div>
+<div id="toast"><span id="tm" style="flex:1"></span><button id="tb"></button></div>
+<input type="file" id="ocrF" accept="image/*" hidden><input type="file" id="imF" accept=".json" hidden>
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const MAPLIB=['https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js','https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js'];
+const TESS=['https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js','https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js'];
+var map=null,mapReady=false,markers=[],lastN=-1,pick=null,EDIT=false,TAB='route',SEL=new Set(),SRL=[],KS=[],XT=null,askRes=null,instEv=null,drag=null,lastTE=0;
+const DEF=()=>({key:'',nav:'gm',width:0,back:false,start:null,end:null,addrs:[],order:[],lists:{},book:[],cur:'',sum:'',dirty:false,bId:''});
+let S=Object.assign(DEF(),(()=>{try{return JSON.parse(localStorage.getItem('cs_state'))||{}}catch(e){return{}}})());
+S.lists=S.lists||{};S.addrs=S.addrs||[];S.order=S.order||[];S.book=S.book||[];
+S.addrs.forEach(a=>{if(!S.order.includes(a.id))S.order.push(a.id)});
+const save=()=>{try{localStorage.setItem('cs_state',JSON.stringify(S))}catch(e){}};
+const byId=id=>S.addrs.find(a=>a.id==id),ordList=()=>S.order.map(byId).filter(Boolean);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const hap=p=>{try{navigator.vibrate&&navigator.vibrate(p||20)}catch(e){}};
+const today=()=>{const d=new Date();return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear()};
+
+// ---------- ikonok ----------
+const I={check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',x:'<path d="M6 6l12 12M18 6L6 18"/>',edit:'<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',
+nav:'<path d="M4 11.5L20 4l-7.5 16-2-6.5z"/>',mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
+pin:'<path d="M12 21s6.5-5.6 6.5-10.5a6.5 6.5 0 0 0-13 0C5.5 15.4 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.3"/>',
+cam:'<path d="M4 8h3l1.6-2.2h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.3"/>',plus:'<path d="M12 5v14M5 12h14"/>',
+route:'<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h6.5a3 3 0 0 0 0-6h-5a3 3 0 0 1 0-6H16"/>',
+map:'<path d="M9 5L4 7v12l5-2 6 2 5-2V5l-5 2z"/><path d="M9 5v12M15 7v12"/>',
+book:'<path d="M6 4h11.5a.5.5 0 0 1 .5.5v15a.5.5 0 0 1-.5.5H6z"/><path d="M6 4v16"/><circle cx="12.5" cy="10" r="2"/><path d="M9.5 15.5c.6-1.6 5.4-1.6 6 0"/>',
+sliders:'<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+more:'<circle cx="5.5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.4" fill="currentColor" stroke="none"/>',
+grip:'<g fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></g>',
+up:'<path d="M6 14l6-6 6 6"/>',down:'<path d="M6 10l6 6 6-6"/>',chev:'<path d="M9 6l6 6-6 6"/>',back:'<path d="M15 6l-6 6 6 6"/>',
+flag:'<path d="M6 21V4M6 5h11l-2 4 2 4H6"/>',search:'<circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/>',trash:'<path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/>',
+paste:'<rect x="6" y="5" width="12" height="16" rx="2"/><path d="M9 5V4h6v1M9 11h6M9 15h6"/>',swap:'<path d="M8 5v14M8 5L5 8M8 5l3 3M16 19V5M16 19l-3-3M16 19l3-3"/>',
+loc:'<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',fit:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'};
+const ico=(n,s)=>`<svg class="i" width="${s||22}" height="${s||22}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
+function initIcons(){const set=(sel,n,s)=>{const e=$(sel);if(e)e.innerHTML=ico(n,s)};
+ set('#eb','swap');set('.tools .ib[aria-label="Menü"]','more');set('.tools .ib[aria-label="Beállítások"]','sliders');set('#ic-s','search');set('#ic-s2','search');
+ set('#mic','mic');set('#mic2','mic');set('#pinb','pin');set('#mpin','pin');set('#mloc','loc');set('#mfit','fit');set('#bcam','cam');set('#bpaste','paste');
+ const t=[['route','Mai út'],['plus','Hozzáad'],['map','Térkép'],['book','Címjegyzék']];$$('#tabs .tab').forEach((b,i)=>{b.innerHTML=ico(t[i][0],24)+'<span>'+t[i][1]+'</span>'})}
+
+// ---------- alap felület: értesítés, lap, oldal, megerősítés ----------
+let tt;function toast(m,lab,fn){$('#tm').textContent=m;const b=$('#tb');$('#toast').style.display='flex';b.style.display=lab?'':'none';if(lab){b.textContent=lab;b.onclick=()=>{fn();$('#toast').style.display='none'}}clearTimeout(tt);tt=setTimeout(()=>$('#toast').style.display='none',lab?7000:3200)}
+function sheet(h){$('#sheet').innerHTML='<div class="grab"></div>'+h;$('#sheet').classList.add('on');$('#scrim').classList.add('on')}
+function closeSheet(){$('#sheet').classList.remove('on');$('#scrim').classList.remove('on');if(askRes){const r=askRes;askRes=null;r(false)}}
+function openPage(title,body,foot){$('#page').innerHTML=`<div class="phd"><button class="ib" id="pb" aria-label="Vissza">${ico('back',24)}</button><div class="pt">${esc(title)}</div></div><div class="pbody">${body}</div>${foot?`<div class="pfoot">${foot}</div>`:''}`;$('#page').classList.add('on');$('#pb').onclick=closePage}
+function closePage(){$('#page').classList.remove('on')}
+function ask(title,msg,ok,danger){return new Promise(res=>{askRes=res;sheet(`<h3>${esc(title)}</h3><p class="mu" style="margin:0">${esc(msg)}</p><div class="btns"><button class="b2" onclick="closeSheet()">Mégse</button><button class="b1 ${danger?'dg':''}" id="aY">${esc(ok)}</button></div>`);$('#aY').onclick=()=>{askRes=null;closeSheet();res(true)}})}
+function askText(title,val,ok){return new Promise(res=>{askRes=r=>res(null);sheet(`<h3>${esc(title)}</h3><input id="aT" value="${esc(val||'')}"><div class="btns"><button class="b2" onclick="closeSheet()">Mégse</button><button class="b1" id="aY">${esc(ok||'Mentés')}</button></div>`);$('#aY').onclick=()=>{const v=$('#aT').value.trim();askRes=null;closeSheet();res(v||null)}})}
+document.addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(b){b.classList.add('p');hap(18);setTimeout(()=>b.classList.remove('p'),1200)}});
+['pointerup','pointercancel'].forEach(ev=>document.addEventListener(ev,()=>$$('.p').forEach(b=>b.classList.remove('p'))));
+
+// ---------- fülek ----------
+function go(t){TAB=t;$$('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+t));$$('#tabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+ if(t==='route')renderRoute();if(t==='book')renderBook();if(t==='add')renderQuick();if(t==='map')openMap()}
+
+// ---------- Mai út ----------
+function seStrip(){const E=S.back?'Vissza a kezdőállomáshoz':(S.end?S.end.label:'nincs kiválasztva');
+ return `<button class="se" onclick="openSE()"><div class="sg"><span class="lab">Rajt</span><b>${esc(S.start?S.start.label:'nincs kiválasztva')}</b></div><span class="ar">${ico('chev',18)}</span><div class="sg"><span class="lab">Vég</span><b>${esc(E)}</b></div></button>`}
+function endRow(txt,label,cap,cls){return `<div class="st ${cls}"><div class="rl"><span class="nd fl">${ico('flag',15)}</span></div><div class="bd"><small>${cap}</small><b>${esc(label)}</b></div></div>`}
+function rowHtml(a,n,isNext,first){const grip=EDIT?`<div class="dgb"><button class="ib" onclick="mv('${a.id}',-1)" aria-label="Fel">${ico('up',20)}</button><button class="ib" onclick="mv('${a.id}',1)" aria-label="Le">${ico('down',20)}</button><span class="gr" data-g="1">${ico('grip',22)}</span></div>`
+ :`<button class="ck ${a.done?'on':''}" onclick="tick('${a.id}')" aria-label="Kész">${ico('check',22)}</button>`;
+ return `<div class="st ${a.done?'dn':''} ${a.det?'br':''} ${isNext?'nx':''}" data-id="${a.id}"><div class="rl"><span class="nd">${a.done?ico('check',16):n}</span></div>
+<div class="bd" onclick="toggleRow('${a.id}')"><b>${esc(a.client||a.label)}</b>${a.client?`<small>${esc(a.label)}</small>`:''}${a.note?`<small>${esc(a.note)}</small>`:''}${S.bId===a.id?'<span class="chip w">B · legtávolabbi</span>':''}${a.lock?'<span class="chip">kézi helyen</span>':''}${a.warn?`<span class="chip w">${esc(a.warn)}</span>`:''}${a.lat==null?'<span class="chip w">nincs koordináta</span>':''}</div>${grip}
+<div class="ac"><button class="b1 sm" onclick="nav('${a.id}')">${ico('nav',18)} Indítás</button><button class="b2 sm" onclick="editStop('${a.id}')">${ico('edit',18)} Szerkeszt</button><button class="b2 sm dg" onclick="del('${a.id}')" aria-label="Törlés">${ico('trash',18)}</button></div></div>`}
+function renderRoute(){const ord=ordList(),pend=ord.filter(a=>!a.done),dn=ord.length-pend.length;
+ $('#rt-sub').textContent=EDIT?'Átrendezés: húzd a sort a fogantyúnál':today()+' · '+dn+' / '+ord.length+' kész';
+ $('#rt-prog').style.width=(ord.length?Math.round(dn/ord.length*100):0)+'%';$('#eb').classList.toggle('on',EDIT);
+ let h=seStrip();
+ if(!EDIT&&S.dirty&&ord.length>1)h+=`<div class="bn"><div>A lista változott<small>Rendezd újra a megállókat</small></div><button class="b1 sm" onclick="runOpt()">Optimalizál</button></div>`;
+ else if(!EDIT&&S.sum&&ord.length)h+=`<div class="sum">${esc(S.sum)}</div>`;
+ if(!ord.length)h+=`<div class="c"><div class="mu" style="margin-bottom:14px">Még nincs megálló az útvonalon.</div><button class="b1" onclick="go('add')">${ico('plus',20)} Első cím hozzáadása</button></div>`;
+ else{const nextId=(pend[0]||{}).id;h+='<div class="tl">';if(S.start)h+=endRow('A',S.start.label,'Rajt','first');let last=null;
+  ord.forEach((a,i)=>{if(a.city!==last){last=a.city;h+=`<div class="sc"><span>${esc(a.city||'?')}</span>${a.det?`<em>${esc(a.role||'ág')}</em>`:''}</div>`}h+=rowHtml(a,i+1,a.id===nextId)});
+  const E=S.back?S.start:S.end;if(E)h+=endRow('C',E.label,S.back?'Vissza a rajthoz':'Vég','last');h+='</div>'}
+ $('#rt-body').innerHTML=h;nextBar(pend,ord);if(map)mapDraw()}
+function nextBar(pend,ord){const el=$('#nextbar');
+ if(EDIT){el.style.display='block';el.innerHTML=`<button class="b1 wide" onclick="setEdit(false)">Kész az átrendezéssel</button>`;return}
+ if(!ord.length){el.style.display='none';return}el.style.display='block';const n=pend[0];
+ if(!n){el.innerHTML=`<div class="nb"><span class="nd nx">${ico('check',18)}</span><div class="nbt"><small>Mai út</small><b>Minden megálló kész</b></div></div>`;return}
+ el.innerHTML=`<div class="nb"><span class="nd nx">${S.order.indexOf(n.id)+1}</span><div class="nbt"><small>Következő</small><b>${esc(n.client||n.label)}</b>${n.client?`<small>${esc(n.label)}</small>`:''}</div><button class="b1" onclick="nav('${n.id}')">${ico('nav',18)} Indítás</button></div>`}
+function toggleRow(id){if(EDIT)return;const r=$$('.st').find(x=>x.dataset.id===id);$$('.st.open').forEach(x=>{if(x!==r)x.classList.remove('open')});if(r)r.classList.toggle('open')}
+function setEdit(v){EDIT=v;renderRoute()}
+function tick(id){const a=byId(id);if(!a)return;a.done=!a.done;save();renderRoute();hap(a.done?[30,40,30]:20);toast(a.done?'Kész: '+(a.client||a.label):'Visszahelyezve','Visszavonás',()=>{a.done=!a.done;save();renderRoute()})}
+async function del(id){const a=byId(id);if(!a)return;if(!await ask('Törlöd a megállót?',a.client||a.label,'Törlés',true))return;
+ const i=S.order.indexOf(id),bk=JSON.parse(JSON.stringify(a));S.addrs=S.addrs.filter(x=>x.id!=id);S.order=S.order.filter(x=>x!=id);S.dirty=true;save();renderRoute();
+ toast('Megálló törölve','Visszavonás',()=>{S.addrs.push(bk);S.order.splice(i,0,id);S.dirty=true;save();renderRoute()})}
+function mv(id,d){const i=S.order.indexOf(id);let j=i+d;if(i<0||j<0||j>=S.order.length)return;[S.order[i],S.order[j]]=[S.order[j],S.order[i]];byId(id).lock=true;S.sum='';save();renderRoute()}
+function nav(id){const a=byId(id);if(!a)return;if(a.lat==null){toast('Ehhez a megállóhoz nincs koordináta');return}
+ const u={gm:`https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lon}&travelmode=driving`,wz:`https://waze.com/ul?ll=${a.lat},${a.lon}&navigate=yes`,geo:`geo:${a.lat},${a.lon}?q=${a.lat},${a.lon}(${encodeURIComponent(a.client||a.label)})`}[S.nav]||'';
+ const w=window.open(u,'_blank');if(!w)location.href=u}
+// húzással átrendezés
+document.addEventListener('pointerdown',e=>{const g=e.target.closest('.gr');if(!g||!EDIT)return;e.preventDefault();const el=g.closest('.st'),r=el.getBoundingClientRect();
+ drag={el,id:el.dataset.id,off:e.clientY-r.top,sc:$('#rt-body')};el.classList.add('lift');try{g.setPointerCapture(e.pointerId)}catch(x){}hap(15)},{passive:false});
+document.addEventListener('pointermove',e=>{if(!drag)return;e.preventDefault();const {el,sc}=drag,sr=sc.getBoundingClientRect();
+ if(e.clientY<sr.top+70)sc.scrollTop-=12;else if(e.clientY>sr.bottom-70)sc.scrollTop+=12;
+ el.style.transform='none';
+ for(const r of [...sc.querySelectorAll('.st[data-id]')].filter(x=>x!==el)){const b=r.getBoundingClientRect();
+  if(e.clientY>b.top&&e.clientY<b.bottom){if(e.clientY<b.top+b.height/2)r.parentNode.insertBefore(el,r);else r.parentNode.insertBefore(el,r.nextSibling);break}}
+ const rr=el.getBoundingClientRect();el.style.transform=`translateY(${e.clientY-drag.off-rr.top}px)`},{passive:false});
+function endDrag(){if(!drag)return;const {el,id}=drag;drag=null;el.style.transform='';el.classList.remove('lift');
+ const ids=[...$('#rt-body').querySelectorAll('.st[data-id]')].map(x=>x.dataset.id),old=S.order.join();
+ S.order=[...ids,...S.order.filter(x=>!ids.includes(x))];if(S.order.join()!==old){byId(id).lock=true;S.sum='';hap(25)}save();renderRoute()}
+['pointerup','pointercancel'].forEach(ev=>document.addEventListener(ev,endDrag));
+function routeMenu(){sheet(`<h3>Útvonal</h3>
+<button class="opt" onclick="closeSheet();openSE()">${ico('flag',22)} Rajt, vég és optimalizálás</button>
+<button class="opt" onclick="closeSheet();setEdit(true)">${ico('swap',22)} Sorrend átrendezése</button>
+<button class="opt" onclick="closeSheet();lsSave()">${ico('check',22)} Útvonal mentése</button>
+<button class="opt" onclick="closeSheet();lsSave(true)">${ico('plus',22)} Mentés más néven</button>
+<button class="opt" onclick="closeSheet();openRoutes()">${ico('route',22)} Mentett útvonalak</button>
+<button class="opt dg" onclick="closeSheet();newRoute()">${ico('trash',22)} Új útvonal (az előző törlése)</button>`)}
+async function newRoute(){if(!S.addrs.length){toast('Nincs törölnivaló útvonal');return false}
+ const key=l=>JSON.stringify((l.addrs||[]).map(a=>[a.id,a.done])),cur=key(S);
+ if(!Object.values(S.lists).some(l=>key(l)===cur)&&await ask('Az útvonal nincs elmentve','Elmented törlés előtt?','Mentés')){await lsSave()}
+ if(!await ask('Új útvonal indítása','A jelenlegi megállók, a sorrend és a pipák törlődnek.','Törlés',true))return false;
+ const bk=JSON.parse(JSON.stringify({start:S.start,end:S.end,back:S.back,addrs:S.addrs,order:S.order,cur:S.cur,sum:S.sum,dirty:S.dirty,bId:S.bId}));
+ S.addrs=[];S.order=[];S.cur='';S.sum='';S.dirty=false;S.bId='';save();EDIT=false;renderRoute();
+ toast('Új útvonal indítva','Visszavonás',()=>{Object.assign(S,bk);save();renderRoute()});return true}
+
+// ---------- megálló felvétele és szerkesztése ----------
+function stopSheet(x,id){const a=id?byId(id):null,d=a||x;XT=x;
+ sheet(`<h3>${a?'Megálló szerkesztése':'Új megálló'}</h3><span class="lbl" style="margin-top:8px">Cím</span><textarea id="dA" rows="2">${esc(d.label)}</textarea>
+<span class="lbl">Vevő vagy vállalkozás neve</span><input id="dC" value="${esc(a?a.client:(x&&x.client)||'')}"><span class="lbl">Jegyzet</span><input id="dN" value="${esc(a?a.note||'':(x&&x.note)||'')}">
+<div class="mu" style="margin-top:10px;font-size:13px">${d.lat!=null?'A hely megvan':'Nincs koordináta, a lista végére kerül'}</div>
+<div class="btns"><button class="b2" onclick="closeSheet()">Mégse</button>${a?`<button class="b2" onclick="pickEdit('${a.id}')">${ico('pin',18)} Térképen</button>`:''}<button class="b1" onclick="stopSave('${id||''}')">${a?'Mentés':'Hozzáad'}</button></div>`)}
+const editStop=id=>stopSheet(null,id);
+function bookUpsert(x,chk,src){let e=x.bookId?S.book.find(b=>b.id===x.bookId):S.book.find(b=>b.client===(x.client||'')&&b.label===x.label&&(b.lat==null||x.lat==null||Math.abs(b.lat-x.lat)<.0005));
+ if(!e){e={id:uid(),src:src||'kézi'};S.book.push(e)}Object.assign(e,{client:x.client||'',label:x.label,city:x.city||'',zip:x.zip||'',lat:x.lat??null,lon:x.lon??null,note:x.note||'',chk:!!chk,apx:!!x.apx});return e}
+function mkAddr(x,client,note,bookId){const a={id:uid(),client:client||'',note:note||'',label:x.label,city:x.city||'?',zip:x.zip||'',lat:x.lat??null,lon:x.lon??null,done:false,lock:false,bookId:bookId||''};S.addrs.push(a);S.order.push(a.id);S.dirty=true;return a}
+async function stopSave(id){const label=$('#dA').value.trim(),client=$('#dC').value.trim(),note=$('#dN').value.trim();if(!label){toast('A cím nem lehet üres');return}
+ if(id){const a=byId(id);closeSheet();a.client=client;a.note=note;
+  if(label!==a.label){a.label=label;const r=await sug(label.replace(/\([^)]*\)/g,' '));if(r[0]&&await ask('Új helyadat találtam',r[0].label,'Használom'))Object.assign(a,{lat:r[0].lat,lon:r[0].lon,city:r[0].city,zip:r[0].zip});S.dirty=true}
+  if(a.bookId){const b=S.book.find(v=>v.id===a.bookId);if(b)Object.assign(b,{client:a.client,label:a.label,note:a.note,lat:a.lat,lon:a.lon,city:a.city,zip:a.zip,chk:false})}
+  save();renderRoute();toast('Mentve');return}
+ const x=XT||{};closeSheet();const b=bookUpsert({...x,label,client,note},false,'útvonal');mkAddr({...x,label},client,note,b.id);save();renderRoute();if(map)mapDraw();toast('Hozzáadva: '+(client||label))}
+function pickEdit(id){closeSheet();pick={type:'edit',id};go('map');showPick('Koppints a megálló pontos helyére',true)}
+function pickNew(){pick={type:'new'};go('map');showPick('Koppints a helyre, amit fel szeretnél venni',true)}
+function showPick(msg){$('#pickbar').style.display='flex';$('#pickmsg').textContent=msg}
+function cancelPick(){pick=null;$('#pickbar').style.display='none'}
+
+// ---------- TomTom ----------
+async function sug(q){if(!S.key){toast('Előbb add meg a TomTom API-kulcsot (Beállítások)');return[]}
+ try{const r=await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(q)}.json?key=${S.key}&countrySet=HU&limit=6&typeahead=true&language=hu-HU&idxSet=PAD,Addr,Str,Geo`);
+ if(!r.ok)throw 0;const j=await r.json();
+ return(j.results||[]).map(x=>({label:x.address.freeformAddress,city:x.address.municipality||x.address.localName||'?',zip:x.address.postalCode||'',lat:x.position.lat,lon:x.position.lon}))}
+ catch(e){toast('Keresési hiba: ellenőrizd a kulcsot és a netet');return[]}}
+async function rev(lat,lon){if(!S.key)return null;try{const r=await fetch(`https://api.tomtom.com/search/2/reverseGeocode/${lat},${lon}.json?key=${S.key}&language=hu-HU`),j=await r.json(),ad=j.addresses&&j.addresses[0]&&j.addresses[0].address;
+ return ad?{label:ad.freeformAddress,city:ad.municipality||ad.localName||'Térképről',zip:ad.postalCode||''}:null}catch(e){return null}}
+function voice(inId){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R){toast('Ez a böngésző nem támogatja a hangbevitelt');return}
+ const r=new R(),b=$(inId==='bq'?'#mic2':'#mic');r.lang='hu-HU';r.interimResults=false;if(b)b.classList.add('rec');
+ r.onresult=e=>{const i=$('#'+inId);i.value=e.results[0][0].transcript;i.dispatchEvent(new Event('input'))};
+ r.onerror=()=>toast('A hangfelismerés nem sikerült');r.onend=()=>{if(b)b.classList.remove('rec')};r.start()}
+
+// ---------- Hozzáadás ----------
+function renderQuick(){const row=(ic,t,s,fn)=>`<button class="rowi" onclick="${fn}">${ico(ic,22)}<span class="t"><b>${t}</b><small>${s}</small></span>${ico('chev',18)}</button>`;
+ $('#quick').innerHTML=`<span class="lbl">Más módon</span>`+row('cam','Fénykép a címjegyzékbe','A beolvasott címek szerkeszthetők','$(\'#ocrF\').click()')+row('paste','Szöveg beillesztése','Szállítási lista másolása','pasteDlg()')+row('loc','Jelenlegi hely','','addHere()')+row('pin','Koordináták','Szélesség, hosszúság','coordDlg()')+row('edit','Kézi rögzítés','Ha nincs találat','manualAdd()')}
+function bookFind(q){const t=q.toLowerCase().split(/\s+/).filter(Boolean);return S.book.filter(b=>{const s=((b.client||'')+' '+b.label).toLowerCase();return t.every(w=>s.includes(w))}).slice(0,4)}
+let qt;document.addEventListener('input',e=>{if(e.target.id!=='q')return;clearTimeout(qt);const q=e.target.value.trim(),box=$('#sug');
+ if(q.length<2){box.innerHTML='';$('#quick').style.display='block';return}$('#quick').style.display='none';
+ qt=setTimeout(async()=>{const bk=bookFind(q),r=q.length>=3?await sug(q):[];SRL=[...bk.map(e=>({k:'b',e})),...r.map(x=>({k:'t',x}))];
+  box.innerHTML=SRL.map((it,i)=>it.k==='b'?`<button class="rowi" onclick="pickSug(${i})">${ico('book',22)}<span class="t"><b>${esc(it.e.client||it.e.label)}</b><small>${esc(it.e.label)}</small></span></button>`:`<button class="rowi" onclick="pickSug(${i})">${ico('pin',22)}<span class="t"><b>${esc(it.x.label)}</b><small>${esc(it.x.city)} ${esc(it.x.zip)}</small></span></button>`).join('')+`<button class="rowi" onclick="manualAdd()">${ico('edit',22)}<span class="t"><b>Kézi rögzítés</b><small>${esc(q)}</small></span></button>`},320)});
+function pickSug(i){const it=SRL[i];$('#q').value='';$('#sug').innerHTML='';$('#quick').style.display='block';
+ if(it.k==='b')stopSheet({...it.e,bookId:it.e.id});else stopSheet(it.x)}
+function manualAdd(){const q=($('#q').value||'').trim();$('#q').value='';$('#sug').innerHTML='';stopSheet({label:q,city:'Koordináta nélkül'})}
+function addHere(){navigator.geolocation.getCurrentPosition(async p=>{const lat=p.coords.latitude,lon=p.coords.longitude,r=await rev(lat,lon);stopSheet({lat,lon,label:r?r.label:'Jelenlegi hely',city:r?r.city:'?',zip:r?r.zip:''})},()=>toast('Nem érem el a helyadatot'),{enableHighAccuracy:true})}
+function coordDlg(){sheet(`<h3>Koordináták</h3><input id="cI" placeholder="46.45, 17.00"><div class="btns"><button class="b2" onclick="closeSheet()">Mégse</button><button class="b1" onclick="coordAdd()">Tovább</button></div>`)}
+async function coordAdd(){const m=$('#cI').value.match(/(-?\d+[.,]\d+)\D+(-?\d+[.,]\d+)/);if(!m){toast('Nem értem a koordinátákat');return}
+ const lat=+m[1].replace(',','.'),lon=+m[2].replace(',','.'),r=await rev(lat,lon);stopSheet({lat,lon,label:r?r.label:lat.toFixed(5)+', '+lon.toFixed(5),city:r?r.city:'Koordinátából',zip:r?r.zip:''})}
+
+// ---------- Címjegyzék ----------
+function renderBook(){const q=($('#bq').value||'').trim().toLowerCase(),t=q.split(/\s+/).filter(Boolean);
+ const list=S.book.filter(b=>{const s=((b.client||'')+' '+b.label+' '+(b.city||'')).toLowerCase();return t.every(w=>s.includes(w))}).sort((a,b)=>(b.chk?1:0)-(a.chk?1:0));
+ $('#bk-sub').textContent=S.book.length+' bejegyzés'+(S.book.some(b=>b.chk)?' · ellenőrizendő van':'');
+ $('#bk-body').innerHTML=list.length?list.map(b=>`<div class="bk"><button class="cb ${SEL.has(b.id)?'on':''}" onclick="selTog('${b.id}')" aria-label="Kijelölés"><span>${ico('check',16)}</span></button><div class="t" onclick="editBook('${b.id}')"><b>${esc(b.client||b.label)}</b>${b.client?`<small>${esc(b.label)}</small>`:''}${b.note?`<small>${esc(b.note)}</small>`:''}${b.chk?'<span class="chip w">ellenőrizendő</span>':''}${b.apx?'<span class="chip w">csak a település</span>':''}${b.lat==null?'<span class="chip w">nincs koordináta</span>':''}</div></div>`).join(''):`<div class="c mu">${S.book.length?'Nincs találat.':'A címjegyzék üres. Fényképről vagy szövegből töltheted fel, és az útvonalba felvett címek is ide kerülnek.'}</div>`;
+ const bar=$('#bookbar');bar.style.display=SEL.size?'flex':'none';$('#bkadd').textContent='Hozzáad az útvonalhoz ('+SEL.size+')'}
+document.addEventListener('input',e=>{if(e.target.id==='bq')renderBook()});
+function selTog(id){SEL.has(id)?SEL.delete(id):SEL.add(id);renderBook()}
+function selClear(){SEL.clear();renderBook()}
+function selAdd(){let n=0;[...SEL].forEach(id=>{const b=S.book.find(v=>v.id===id);if(b){mkAddr(b,b.client,b.note,b.id);n++}});SEL.clear();save();go('route');toast(n+' megálló az útvonalon')}
+function editBook(id){const b=S.book.find(v=>v.id===id);if(!b)return;
+ sheet(`<h3>Címjegyzék-bejegyzés</h3><span class="lbl" style="margin-top:8px">Cím</span><textarea id="eA" rows="2">${esc(b.label)}</textarea><span class="lbl">Vevő vagy vállalkozás neve</span><input id="eC" value="${esc(b.client)}"><span class="lbl">Jegyzet</span><input id="eN" value="${esc(b.note)}">
+<div class="btns"><button class="b2 dg" onclick="bookDel('${id}')" aria-label="Törlés">${ico('trash',20)}</button><button class="b2" onclick="bookPick('${id}')">${ico('pin',18)} Térképen</button><button class="b1" onclick="bookSave('${id}')">Mentés</button></div>`)}
+async function bookSave(id){const b=S.book.find(v=>v.id===id),label=$('#eA').value.trim();if(!label)return;const ch=label!==b.label;closeSheet();
+ Object.assign(b,{client:$('#eC').value.trim(),note:$('#eN').value.trim(),label});
+ if(ch){const r=await sug(label.replace(/\([^)]*\)/g,' '));if(r[0]&&await ask('Új helyadat találtam',r[0].label,'Használom'))Object.assign(b,{lat:r[0].lat,lon:r[0].lon,city:r[0].city,zip:r[0].zip,apx:false})}
+ b.chk=false;save();renderBook();toast('Mentve')}
+async function bookDel(id){if(!await ask('Törlöd a bejegyzést?','Az útvonalon lévő megállók megmaradnak.','Törlés',true))return;S.book=S.book.filter(v=>v.id!==id);SEL.delete(id);save();renderBook()}
+function bookPick(id){closeSheet();pick={type:'book',id};go('map');showPick('Koppints a pontos helyre')}
+function pasteDlg(){ocrDlg('','Illeszd be a szállítási lista szövegét, majd nyomd meg a Kinyerés gombot.')}
+function parseOcr(txt){const L=txt.split('\n').map(s=>s.trim()).filter(Boolean),out=[];
+ for(let i=0;i<L.length;i++){const m=L[i].match(/^([1-9]\d{3})\s+([A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű].*)$/);if(!m)continue;
+  let nx=L[i+1]||'';if(/^TR\d/i.test(nx)||/^[1-9]\d{3}\s/.test(nx)||/\d{4}\.\d\d\.\d\d/.test(nx))nx='';
+  out.push(nx.replace(/^\d{5,7}\s+/,'').trim()+' | '+L[i])}
+ return out}
+function ocrDlg(t,st){sheet(`<h3>Címek beolvasása</h3><div class="mu" id="ocrSt" style="font-size:14px">${esc(st)}</div><textarea id="ocrT" rows="9" style="margin-top:10px">${esc(t)}</textarea>
+<div class="btns"><button class="b2" onclick="closeSheet()">Mégse</button><button class="b2" onclick="ocrParse()">Kinyerés</button><button class="b1" onclick="ocrAdd()">Címjegyzékbe</button></div>`)}
+function ocrParse(){const L=parseOcr($('#ocrT').value);if(L.length){$('#ocrT').value=L.join('\n');$('#ocrSt').textContent=L.length+' cím kinyerve (vevő | cím). Javítsd, ha kell.'}else $('#ocrSt').textContent='Nem találtam irányítószámmal kezdődő sort.'}
+$('#ocrF').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;ocrDlg('','Szöveg felismerése… Első alkalommal a nyelvi adat letöltése miatt internet kell.');
+ try{if(!await loadAny(TESS,()=>!!window.Tesseract))throw new Error('az OCR-motor nem töltődött be');
+  const r=await Tesseract.recognize(f,'hun'),lines=parseOcr(r.data.text);
+  ocrDlg(lines.length?lines.join('\n'):r.data.text,lines.length?'Javítsd a sorokat (vevő | cím), majd mentsd a címjegyzékbe:':'Nem találtam irányítószámos sort. A felismert szöveg alább; javítsd kézzel (vevő | irányítószám város utca):')}
+ catch(err){ocrDlg('','Az OCR nem indult el: '+((err&&err.message)||err)+'. Nézd meg az Állapotot a Beállításokban.')}};
+async function ocrAdd(){const ls=$('#ocrT').value.split('\n').map(s=>s.trim()).filter(Boolean);closeSheet();if(!ls.length)return;let bad=0,apx=0;
+ for(let i=0;i<ls.length;i++){toast('Keresés: '+(i+1)+' / '+ls.length);const l=ls[i],p=l.includes('|')?l.split('|'):['',l],cl=p[0].trim(),raw=p.slice(1).join('|').trim();
+  let a=raw.replace(/\([^)]*\)/g,' ').replace(/\s+/g,' ').trim();const z2=a.match(/^\d{4}\s.*?\s(\d{4}\s.+)$/);if(z2)a=z2[1];
+  const t=a.split(' '),city=t[1]||'?';let r=await sug(a),ap=false;if(!r[0]){r=await sug(t[0]+' '+city);ap=true}
+  if(r[0]){bookUpsert({...r[0],city,label:raw+(ap?' (a település közepe)':''),client:cl,apx:ap},true,'beolvasás');if(ap)apx++}else{bookUpsert({label:raw,city,client:cl},true,'beolvasás');bad++}}
+ save();go('book');toast(`${ls.length} cím a címjegyzékben`+(apx?`, ${apx} csak településszinten`:'')+(bad?`, ${bad} koordináta nélkül`:''))}
+
+// ---------- Térkép (MapLibre + TomTom stílus) ----------
+const loadScript=u=>new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
+async function loadAny(us,test){for(const u of us){if(test())return true;try{await loadScript(u)}catch(e){}}return test()}
+async function ensureMap(){if(map)return true;
+ if(!window.maplibregl){const c=document.createElement('link');c.rel='stylesheet';c.href='https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css';document.head.appendChild(c);await loadAny(MAPLIB,()=>!!window.maplibregl)}
+ if(!window.maplibregl){$('#map').innerHTML='<p class="mu c">A térképhez internet kell.</p>';return false}
+ if(!S.key){$('#map').innerHTML='<p class="mu c">Add meg a TomTom-kulcsot a Beállításokban.</p>';return false}
+ map=new maplibregl.Map({container:'map',style:`https://api.tomtom.com/map/1/style/20.0.0-8/basic_main.json?key=${encodeURIComponent(S.key)}&language=hu-HU`,center:[17.0,46.5],zoom:8,attributionControl:false});
+ map.addControl(new maplibregl.AttributionControl({compact:true}),'bottom-left');
+ map.on('load',()=>{mapReady=true;mapDraw(true)});map.on('click',mapTap);
+ map.on('error',()=>{if(Date.now()-lastTE>20000){lastTE=Date.now();toast('A térkép egy része nem töltődik. Nézd meg az Állapotot.')}});return true}
+async function openMap(){const ok=await ensureMap();if(ok){map.resize();mapDraw(true)}}
+function mapDraw(fit){if(!map)return;markers.forEach(m=>m.remove());markers=[];const pts=[],line=[];
+ const mk=(p,txt,cls,cb)=>{const el=document.createElement('div');el.className='mk '+cls;el.textContent=txt;el.onclick=ev=>{ev.stopPropagation();if(cb)cb()};markers.push(new maplibregl.Marker({element:el}).setLngLat([p.lon,p.lat]).addTo(map));pts.push([p.lon,p.lat])};
+ if(S.start){mk(S.start,'A','fl',()=>toast('Rajt: '+S.start.label));line.push([S.start.lon,S.start.lat])}
+ ordList().forEach((a,i)=>{if(a.lat==null)return;mk(a,a.done?'✓':i+1,(a.done?'dn ':'')+(a.det?'br':''),()=>showMS(a.id));if(!a.done)line.push([a.lon,a.lat])});
+ const E=S.back?S.start:S.end;if(S.end&&!S.back)mk(S.end,'C','fl',()=>toast('Vég: '+S.end.label));if(E)line.push([E.lon,E.lat]);
+ const gj=line.length>1?{type:'Feature',geometry:{type:'LineString',coordinates:line},properties:{}}:{type:'FeatureCollection',features:[]};
+ if(mapReady){const src=map.getSource('ord');if(src)src.setData(gj);else{map.addSource('ord',{type:'geojson',data:gj});map.addLayer({id:'ord',type:'line',source:'ord',paint:{'line-color':'#f4b740','line-width':3,'line-dasharray':[2,2]}})}}
+ $('#mp-sub').textContent=ordList().filter(a=>!a.done).length+' hátralévő megálló';
+ if(pts.length&&(fit===true||pts.length!==lastN)){const b=new maplibregl.LngLatBounds(pts[0],pts[0]);pts.forEach(p=>b.extend(p));map.fitBounds(b,{padding:70,maxZoom:14,duration:0})}lastN=pts.length}
+function showMS(id){const a=byId(id);if(!a)return;const n=S.order.indexOf(id)+1;const el=$('#msheet');el.style.display='block';
+ el.innerHTML=`<div class="nb"><span class="nd nx">${n}</span><div class="nbt"><b>${esc(a.client||a.label)}</b><small>${esc(a.client?a.label:a.city)}</small></div><button class="ib" onclick="$('#msheet').style.display='none'" aria-label="Bezár">${ico('x',20)}</button></div>
+<div class="btns" style="margin-top:12px"><button class="b1 sm" onclick="nav('${id}')">${ico('nav',18)} Indítás</button><button class="b2 sm" onclick="tick('${id}');$('#msheet').style.display='none'">Kész</button><button class="b2 sm" onclick="editStop('${id}')">Szerkeszt</button></div>`}
+function focusMap(id){go('map')}
+function locateMe(){if(!map)return;navigator.geolocation.getCurrentPosition(p=>map.flyTo({center:[p.coords.longitude,p.coords.latitude],zoom:14}),()=>toast('Nem érem el a helyadatot'),{enableHighAccuracy:true})}
+async function mapTap(e){const lat=e.lngLat.lat,lon=e.lngLat.lng;if(!pick){$('#msheet').style.display='none';return}
+ const p=pick,r=await rev(lat,lon);
+ if(p.type==='new'){stopSheet({lat,lon,label:r?r.label:lat.toFixed(5)+', '+lon.toFixed(5),city:r?r.city:'Térképről',zip:r?r.zip:''});return}
+ pick=null;$('#pickbar').style.display='none';
+ if(p.type==='edit'){const a=byId(p.id);if(a){a.lat=lat;a.lon=lon;S.dirty=true;if(a.bookId){const b=S.book.find(v=>v.id===a.bookId);if(b){b.lat=lat;b.lon=lon;b.chk=false;b.apx=false}}save();renderRoute();mapDraw();toast('Hely módosítva')}}
+ else if(p.type==='book'){const b=S.book.find(v=>v.id===p.id);if(b){b.lat=lat;b.lon=lon;b.chk=false;b.apx=false;if(r&&!b.city)b.city=r.city;save();toast('Hely mentve a címjegyzékbe')}}
+ else{S[p.type]={label:r?r.label:'Kijelölt hely',lat,lon};S.dirty=true;save();renderRoute();mapDraw();openSE()}}
+
+// ---------- Rajt és vég ----------
+function openSE(){const E=S.end?S.end.label:'Válassz végpontot';
+ openPage('Rajt és vég',`<span class="lbl">Rajt (A)</span><button class="rowi" onclick="placeDlg('start')">${ico('flag',22)}<span class="t"><b>${esc(S.start?S.start.label:'Válassz kezdőpontot')}</b></span>${ico('chev',18)}</button>
+<span class="lbl">Vég (C)</span><button class="rowi" onclick="placeDlg('end')" style="${S.back?'opacity:.4':''}">${ico('flag',22)}<span class="t"><b>${esc(E)}</b></span>${ico('chev',18)}</button>
+<div class="sw"><span>Vissza a kezdőállomáshoz</span><button class="tg ${S.back?'on':''}" onclick="S.back=!S.back;save();openSE();renderRoute()" aria-label="Kapcsoló"></button></div>
+<div class="sw"><span>A kézzel mozgatott megállók maradjanak a helyükön</span><button class="tg" id="ckKeep" onclick="this.classList.toggle('on')" aria-label="Kapcsoló"></button></div>
+<p class="mu" style="font-size:13px;margin-top:16px">A sorrend: A (rajt) → B (a rajttól legtávolabbi cím) → C (vég). A címek a folyosó mentén következnek, az ágak ott, ahol leágaznak.</p>`,
+ `<button class="b1 wide" onclick="runOpt()">Optimalizál</button>`)}
+let PW='',PR=[];
+function placeDlg(w){PW=w;const st=ordList().filter(a=>a.lat!=null).slice(0,40);
+ sheet(`<h3>${w==='start'?'Rajt':'Vég'}</h3><div class="in"><span>${ico('search',20)}</span><input id="pI" placeholder="Cím keresése" autocomplete="off"><button class="ib" onclick="voice('pI')" aria-label="Hang">${ico('mic',22)}</button></div><div id="pB"></div>
+<button class="opt" onclick="placeHere()">${ico('loc',22)} Jelenlegi hely</button><button class="opt" onclick="placeMap()">${ico('pin',22)} Kijelölés a térképen</button>${w==='end'?`<button class="opt" onclick="placeSet(null)">${ico('x',22)} Nincs külön végpont</button>`:''}
+${st.length?'<span class="lbl">Valamelyik megálló</span>':''}${st.map(a=>`<button class="opt" onclick="placeStop('${a.id}')"><span class="mu">${S.order.indexOf(a.id)+1}</span> ${esc(a.client||a.label)}</button>`).join('')}`)}
+let pt;document.addEventListener('input',e=>{if(e.target.id!=='pI')return;clearTimeout(pt);const q=e.target.value.trim();if(q.length<3){$('#pB').innerHTML='';return}
+ pt=setTimeout(async()=>{PR=await sug(q);$('#pB').innerHTML=PR.map((x,i)=>`<button class="opt" onclick="placeSet(PR[${i}])">${ico('pin',22)}<span><b style="font-weight:500">${esc(x.label)}</b></span></button>`).join('')},320)});
+function placeSet(x){S[PW]=x?{label:x.label,lat:x.lat,lon:x.lon}:null;S.dirty=true;save();closeSheet();openSE();renderRoute()}
+function placeStop(id){const a=byId(id);placeSet({label:a.client||a.label,lat:a.lat,lon:a.lon})}
+function placeHere(){navigator.geolocation.getCurrentPosition(p=>placeSet({label:'Jelenlegi hely',lat:p.coords.latitude,lon:p.coords.longitude}),()=>toast('Nem érem el a helyadatot'),{enableHighAccuracy:true})}
+function placeMap(){closeSheet();closePage();pick={type:PW};go('map');showPick('Koppints a helyre ('+(PW==='start'?'rajt':'vég')+')')}
+async function runOpt(){const keep=!!($('#ckKeep')&&$('#ckKeep').classList.contains('on'));closePage();closeSheet();EDIT=false;await optimize(keep);go('route')}
+
+// ---------- mentett útvonalak ----------
+const snap=()=>JSON.parse(JSON.stringify({start:S.start,end:S.end,back:S.back,addrs:S.addrs,order:S.order}));
+async function lsSave(asNew){const n=await askText('Az útvonal neve',asNew?'':(S.cur||''));if(!n)return;S.lists[n]=snap();S.cur=n;save();toast('Mentve: '+n)}
+function openRoutes(){KS=Object.keys(S.lists);
+ openPage('Mentett útvonalak',KS.length?KS.map((n,i)=>`<div class="rowi" style="flex-wrap:wrap"><span class="t"><b>${esc(n)}</b><small>${S.lists[n].addrs.length} megálló${n===S.cur?' · jelenlegi':''}</small></span>
+ <div style="display:flex;gap:8px;width:100%"><button class="b1 sm" onclick="lsOpen(${i})">Megnyitás</button><button class="b2 sm" onclick="lsRename(${i})">Átnevezés</button><button class="b2 sm" onclick="lsCopy(${i})">Másolat</button><button class="b2 sm dg" onclick="lsDel(${i})" aria-label="Törlés">${ico('trash',18)}</button></div></div>`).join(''):'<div class="c mu">Még nincs mentett útvonal.</div>')}
+async function lsOpen(i){const n=KS[i],l=S.lists[n];if(!l)return;if(S.addrs.length&&!await ask('Betöltöd az útvonalat?','A jelenlegi útvonal helyére kerül: '+n,'Betöltés'))return;
+ Object.assign(S,JSON.parse(JSON.stringify({start:l.start,end:l.end,back:l.back||false,addrs:l.addrs,order:l.order})));S.cur=n;S.sum='';S.dirty=false;S.bId='';save();closePage();go('route')}
+async function lsRename(i){const n=KS[i],m=await askText('Új név',n);if(!m||m===n)return;S.lists[m]=S.lists[n];delete S.lists[n];if(S.cur===n)S.cur=m;save();openRoutes()}
+async function lsCopy(i){const n=KS[i],m=await askText('A másolat neve',n+' másolat');if(!m)return;S.lists[m]=JSON.parse(JSON.stringify(S.lists[n]));save();openRoutes()}
+async function lsDel(i){const n=KS[i];if(!await ask('Törlöd az útvonalat?',n,'Törlés',true))return;delete S.lists[n];if(S.cur===n)S.cur='';save();openRoutes()}
+
+// ---------- beállítások, állapot, mentés ----------
+function openSettings(){openPage('Beállítások',`<span class="lbl">Navigációs alkalmazás</span><select id="navSel"><option value="gm">Google Maps</option><option value="wz">Waze</option><option value="geo">Alapértelmezett (Android választó)</option></select>
+<span class="lbl">TomTom API-kulcs</span><input id="key" type="password" placeholder="API-kulcs" autocomplete="off"><div class="mu" style="font-size:13px;margin-top:6px">Csak ezen az eszközön tárolódik.</div>
+<span class="lbl">Folyosó szélessége (km)</span><input id="width" type="number" min="0" step="0.5"><div class="mu" style="font-size:13px;margin-top:6px">0 = automatikus. Ennél közelebbi település a folyosón van, a távolabbi ág.</div>
+<div class="btns"><button class="b1" onclick="setSave()">Mentés</button><button class="b2" onclick="testKey()">Kapcsolat tesztelése</button></div>
+<span class="lbl">Állapot</span><div id="diag" class="mu" style="font-size:14px;line-height:1.7">Ellenőrzés…</div>
+<div class="btns"><button class="b2" onclick="diag()">Újra ellenőriz</button><button class="b1" id="instBtn" style="display:none" onclick="doInstall()">Telepítés</button></div>
+<span class="lbl">Biztonsági mentés</span><div class="btns" style="margin-top:0"><button class="b2" onclick="expo()">Export</button><button class="b2" onclick="$('#imF').click()">Import</button></div>`);
+ $('#navSel').value=S.nav;$('#key').value=S.key;$('#width').value=S.width||0;if(instEv)$('#instBtn').style.display='';diag()}
+function setSave(){S.key=$('#key').value.trim();S.nav=$('#navSel').value;S.width=Math.max(0,+$('#width').value||0);save();toast('Beállítások mentve')}
+async function testKey(){S.key=$('#key').value.trim();save();const r=await sug('Budapest Váci út 1');if(r.length)toast('A TomTom kapcsolat működik')}
+async function diag(){const o=[],ok=(b,t)=>o.push((b?'✓ ':'✗ ')+t),d=$('#diag');if(!d)return;d.textContent='Ellenőrzés…';
+ ok(navigator.onLine,'Internetkapcsolat'+(navigator.onLine?'':' – nincs hálózat'));
+ o.push('ℹ Megnyitás módja: '+(location.protocol==='file:'?'helyi fájl (néha korlátozza a böngésző)':String(location.protocol).replace(':','')));
+ ok(!!window.maplibregl||await loadAny(MAPLIB,()=>!!window.maplibregl),'Térkép-könyvtár');
+ ok(!!window.Tesseract||await loadAny(TESS,()=>!!window.Tesseract),'OCR-motor');
+ ok(!!S.key,'TomTom-kulcs megadva'+(S.key?'':' – írd be fent és mentsd'));
+ if(S.key){const t=async(u,name,hint)=>{try{const r=await fetch(u);ok(r.ok,name+(r.ok?'':` – hiba ${r.status}${hint||''}`))}catch(e){ok(false,name+' – nem érhető el')}};
+  await t(`https://api.tomtom.com/search/2/search/Budapest.json?key=${S.key}&limit=1`,'TomTom címkeresés',' (hibás kulcs vagy hiányzó engedély)');
+  await t(`https://api.tomtom.com/routing/1/calculateRoute/47.4979,19.0402:47.5,19.05/json?key=${S.key}&instructionsType=none`,'TomTom útvonal-adat (Routing API)',' (ehhez az API-hoz nincs engedély?)');
+  await t(`https://api.tomtom.com/map/1/style/20.0.0-8/basic_main.json?key=${S.key}`,'TomTom térképstílus',' (a kulcsnak a Map Display API kell)')}
+ const dd=$('#diag');if(dd)dd.innerHTML=o.join('<br>')}
+function expo(){const b=new Blob([JSON.stringify({lists:S.lists,book:S.book,current:snap()},null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cimsorrend-mentes.json';a.click()}
+$('#imF').onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text());Object.assign(S.lists,j.lists||{});if(j.book)j.book.forEach(b=>{if(!S.book.some(x=>x.id===b.id))S.book.push(b)});if(j.current)Object.assign(S,j.current);S.addrs.forEach(a=>{if(!S.order.includes(a.id))S.order.push(a.id)});save();toast('Import kész');go(TAB)}catch(x){toast('Hibás fájl')}e.target.value=''};
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;const b=$('#instBtn');if(b)b.style.display=''});
+async function doInstall(){if(!instEv)return;instEv.prompt();await instEv.userChoice;instEv=null;const b=$('#instBtn');if(b)b.style.display='none'}
+window.addEventListener('appinstalled',()=>toast('Telepítve a kezdőképernyőre'));
+if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+// ---------- folyosó–ág optimalizáló (A → B → C) ----------
+async function routeAlt(a,b){if(!S.key)return null;
+ try{const r=await fetch(`https://api.tomtom.com/routing/1/calculateRoute/${a.lat},${a.lon}:${b.lat},${b.lon}/json?key=${S.key}&maxAlternatives=2&routeType=fastest&traffic=false&travelMode=car`);
+  if(!r.ok)return null;const j=await r.json();
+  const rs=(j.routes||[]).map(x=>({pts:x.legs.flatMap(l=>l.points.map(p=>({lat:p.latitude,lon:p.longitude})))})).filter(x=>x.pts.length>1);
+  return rs.length?rs:null}catch(e){return null}}
+function mkPoly(pts,xy){const P=pts.map(xy),cum=[0];for(let i=1;i<P.length;i++)cum.push(cum[i-1]+Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y));return{P,cum}}
+function proj(poly,q){let bd=Infinity,bs=0;const P=poly.P;
+ for(let i=1;i<P.length;i++){const ax=P[i-1].x,ay=P[i-1].y,dx=P[i].x-ax,dy=P[i].y-ay,l2=dx*dx+dy*dy;let t=l2?((q.x-ax)*dx+(q.y-ay)*dy)/l2:0;t=Math.max(0,Math.min(1,t));
+  const d=Math.hypot(q.x-ax-t*dx,q.y-ay-t*dy);if(d<bd){bd=d;bs=poly.cum[i-1]+t*Math.sqrt(l2)}}
+ return{d:bd,s:bs}}
+// Több lehetséges út közül azt választjuk, amelyik a legtöbb települést érinti (nem a legrövidebbet)
+function pickAlt(polys,pend,XY,T){let best=null,bk=null;polys.forEach(po=>{const cd={};let sum=0;pend.forEach(a=>{const d=proj(po,XY.get(a.id)).d;sum+=d;cd[a.city]=Math.min(cd[a.city]??Infinity,d)});
+  const cov=Object.values(cd).filter(d=>d<=T).length,key=[-cov,sum,po.cum[po.cum.length-1]];
+  if(!bk||key[0]<bk[0]||(key[0]===bk[0]&&(key[1]<bk[1]||(key[1]===bk[1]&&key[2]<bk[2])))){bk=key;best=po}});return best}
+async function optimize(keep){const pend=S.addrs.filter(a=>!a.done&&a.lat!=null);
+ if(!pend.length){toast('Nincs rendezhető cím (koordináta kell)');return}
+ if(!S.start){toast('Előbb válaszd ki a rajtot (A)');openSE();return}
+ const A=S.start,C=S.back?S.start:S.end,k=Math.cos(A.lat*Math.PI/180);
+ const xy=p=>({x:(p.lon-A.lon)*k*111.32,y:(p.lat-A.lat)*110.57}),XY=new Map(pend.map(a=>[a.id,xy(a)]));
+ // B: a rajttól földrajzilag legtávolabbi cím
+ let B=pend[0],bd=-1;pend.forEach(a=>{const q=XY.get(a.id),d=Math.hypot(q.x,q.y);if(d>bd){bd=d;B=a}});
+ const T=S.width>0?S.width:Math.min(5,Math.max(2,bd*0.03));
+ toast('Folyosó keresése…');
+ const al1=await routeAlt(A,B),al2=C?await routeAlt(B,C):null,offline=!al1;
+ const po1=pickAlt(al1?al1.map(r=>mkPoly(r.pts,xy)):[mkPoly([A,B],xy)],pend,XY,T);
+ const po2=C?pickAlt(al2?al2.map(r=>mkPoly(r.pts,xy)):[mkPoly([B,C],xy)],pend,XY,T):null;
+ // minden címnek: távolsága és helye (haladása) a két szakaszon; a közelebbi szakaszhoz tartozik, döntetlennél a kifelé úthoz
+ const M=new Map();pend.forEach(a=>{const q=XY.get(a.id),p1=proj(po1,q),p2=po2?proj(po2,q):null,bk=!!p2&&p2.d+0.2<p1.d;
+  M.set(a.id,{seg:bk?'back':'out',d:Math.min(p1.d,p2?p2.d:Infinity),s:bk?p2.s:p1.s})});
+ const cityD={};pend.forEach(a=>{cityD[a.city]=Math.min(cityD[a.city]??Infinity,M.get(a.id).d)});
+ const cor=pend.filter(a=>cityD[a.city]<=T),off=pend.filter(a=>cityD[a.city]>T);
+ // ágak: két település egy ágba kerül, ha közelebb van egymáshoz, mint a folyosóhoz
+ const cities=[...new Set(off.map(a=>a.city))],uf={};cities.forEach(c=>uf[c]=c);const fd=c=>uf[c]===c?c:(uf[c]=fd(uf[c]));
+ const cdist=(c1,c2)=>{let m=Infinity;off.forEach(a=>{if(a.city!==c1)return;off.forEach(b=>{if(b.city!==c2)return;const p=XY.get(a.id),q=XY.get(b.id);m=Math.min(m,Math.hypot(p.x-q.x,p.y-q.y))})});return m};
+ for(let i=0;i<cities.length;i++)for(let j=i+1;j<cities.length;j++)if(cdist(cities[i],cities[j])<Math.min(cityD[cities[i]],cityD[cities[j]]))uf[fd(cities[i])]=fd(cities[j]);
+ const cl={};off.forEach(a=>(cl[fd(a.city)]=cl[fd(a.city)]||[]).push(a));
+ const br=Object.values(cl).map(mem=>{const e=mem.reduce((m,a)=>M.get(a.id).d<M.get(m.id).d?a:m,mem[0]),me=M.get(e.id),q=XY.get(e.id);
+  mem.sort((a,b)=>{const pa=XY.get(a.id),pb=XY.get(b.id);return Math.hypot(pb.x-q.x,pb.y-q.y)-Math.hypot(pa.x-q.x,pa.y-q.y)}); // a legtávolabbi címtől indulunk, a visszatérés felé
+  return{seg:me.seg,key:me.s,mem,name:[...new Set(mem.map(a=>a.city))].join(', ')}});
+ const build=seg=>{const en=[];cor.filter(a=>M.get(a.id).seg===seg).forEach(a=>en.push({key:M.get(a.id).s,t:0,ids:[a.id]}));
+  br.filter(b=>b.seg===seg).forEach(b=>en.push({key:b.key,t:1,ids:b.mem.map(a=>a.id)}));
+  en.sort((x,y)=>x.key-y.key||x.t-y.t);return en.flatMap(e=>e.ids)};
+ let ord=[...build('out'),...build('back')];
+ pend.forEach(a=>{a.reg=0;a.det=false;a.warn='';a.role=''});
+ cor.forEach(a=>{a.role=M.get(a.id).seg==='out'?'folyosó · kifelé':'folyosó · vissza'});
+ br.forEach(b=>b.mem.forEach(a=>{a.det=true;a.role='ág: '+b.name;if(cityD[a.city]<=2.5*T)a.warn='ág vagy folyosó?'}));
+ if(keep){const cur=S.order.filter(id=>pend.some(a=>a.id==id)),locked=new Map();cur.forEach((id,i)=>{if(byId(id).lock)locked.set(i,id)});
+  const lk=[...locked.values()],free=ord.filter(id=>!lk.includes(id));ord=cur.map((_,i)=>locked.has(i)?locked.get(i):free.shift())}
+ else S.addrs.forEach(a=>a.lock=false);
+ finishOrder(ord);S.dirty=false;S.bId=B.id;S.sum=`B: ${B.city} · ${cor.length} cím a folyosón · ${off.length} cím ágon`+(offline?' · úthálózat nélkül (légvonal)':'');
+ save();renderRoute();toast('Sorrend elkészült. '+S.sum)}
+function finishOrder(ord){const done=S.order.filter(id=>byId(id)&&byId(id).done),nc=S.addrs.filter(a=>!a.done&&a.lat==null).map(a=>a.id);
+ const all=[...done,...ord,...nc];S.addrs.forEach(a=>{if(!all.includes(a.id))all.push(a.id)});S.order=all}
+
+
+
+initIcons();go('route');
+
+</script></body></html>
