@@ -136,6 +136,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const MAPLIB=['https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js','https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js'];
 const TESS=['https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js','https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js'];
 var map=null,mapReady=false,markers=[],lastN=-1,pick=null,EDIT=false,TAB='route',SEL=new Set(),SRL=[],KS=[],XT=null,askRes=null,instEv=null,drag=null,lastTE=0;
+const VER='v11';
 const DEF=()=>({key:'',nav:'gm',width:0,back:false,start:null,end:null,addrs:[],order:[],lists:{},book:[],cur:'',sum:'',dirty:false,bId:''});
 let S=Object.assign(DEF(),(()=>{try{return JSON.parse(localStorage.getItem('cs_state'))||{}}catch(e){return{}}})());
 S.lists=S.lists||{};S.addrs=S.addrs||[];S.order=S.order||[];S.book=S.book||[];
@@ -259,7 +260,7 @@ function stopSheet(x,id){const a=id?byId(id):null,d=a||x;XT=x;
 <div class="btns"><button class="b2" onclick="closeSheet()">Mégse</button>${a?`<button class="b2" onclick="pickEdit('${a.id}')">${ico('pin',18)} Térképen</button>`:''}<button class="b1" onclick="stopSave('${id||''}')">${a?'Mentés':'Hozzáad'}</button></div>`)}
 const editStop=id=>stopSheet(null,id);
 function bookUpsert(x,chk,src){let e=x.bookId?S.book.find(b=>b.id===x.bookId):S.book.find(b=>b.client===(x.client||'')&&b.label===x.label&&(b.lat==null||x.lat==null||Math.abs(b.lat-x.lat)<.0005));
- if(!e){e={id:uid(),src:src||'kézi'};S.book.push(e)}Object.assign(e,{client:x.client||'',label:x.label,city:x.city||'',zip:x.zip||'',lat:x.lat??null,lon:x.lon??null,note:x.note||'',phone:x.phone!==undefined?x.phone:(e.phone||''),chk:!!chk,apx:!!x.apx});return e}
+ if(!e){e={id:uid(),src:src||'kézi'};S.book.push(e)}Object.assign(e,{client:x.client||'',label:x.label,city:x.city||'',zip:x.zip||'',lat:x.lat??null,lon:x.lon??null,note:x.note||'',phone:x.phone!==undefined?x.phone:(e.phone||''),raw:x.raw!==undefined?x.raw:(e.raw||''),chk:!!chk,apx:!!x.apx});return e}
 function mkAddr(x,client,note,bookId){const a={id:uid(),client:client||'',note:note||'',label:x.label,city:x.city||'?',zip:x.zip||'',lat:x.lat??null,lon:x.lon??null,done:false,lock:false,phone:x.phone||'',bookId:bookId||''};S.addrs.push(a);S.order.push(a.id);S.dirty=true;return a}
 async function stopSave(id){const label=$('#dA').value.trim(),client=$('#dC').value.trim(),note=$('#dN').value.trim(),phone=$('#dP').value.trim();if(!label){toast('A cím nem lehet üres');return}
  if(id){const a=byId(id);closeSheet();a.client=client;a.note=note;a.phone=phone;
@@ -319,7 +320,7 @@ function selTog(id){SEL.has(id)?SEL.delete(id):SEL.add(id);renderBook()}
 function selClear(){SEL.clear();renderBook()}
 function selAdd(){let n=0;[...SEL].forEach(id=>{const b=S.book.find(v=>v.id===id);if(b){mkAddr(b,b.client,b.note,b.id);n++}});SEL.clear();save();go('route');toast(n+' megálló az útvonalon')}
 function editBook(id){const b=S.book.find(v=>v.id===id);if(!b)return;
- sheet(`<h3>Címjegyzék-bejegyzés</h3><span class="lbl" style="margin-top:8px">Cím</span><textarea id="eA" rows="2">${esc(b.label)}</textarea><span class="lbl">Vevő vagy vállalkozás neve</span><input id="eC" value="${esc(b.client)}"><span class="lbl">Jegyzet</span><input id="eN" value="${esc(b.note)}"><span class="lbl">Telefonszám</span><div class="in" style="margin-top:0"><input id="eP" type="tel" inputmode="tel" value="${esc(b.phone||'')}" placeholder="+36 30 123 4567">${(navigator.contacts&&navigator.contacts.select)?`<button class="ib" onclick="pickContact('eP')" aria-label="Névjegyek">${ico('book',22)}</button>`:''}</div>
+ sheet(`<h3>Címjegyzék-bejegyzés</h3><span class="lbl" style="margin-top:8px">Cím</span><textarea id="eA" rows="2">${esc(b.label)}</textarea>${b.raw?`<div class="mu" style="font-size:12.5px;margin-top:6px">Beolvasott szöveg: ${esc(b.raw)}</div>`:''}<span class="lbl">Vevő vagy vállalkozás neve</span><input id="eC" value="${esc(b.client)}"><span class="lbl">Jegyzet</span><input id="eN" value="${esc(b.note)}"><span class="lbl">Telefonszám</span><div class="in" style="margin-top:0"><input id="eP" type="tel" inputmode="tel" value="${esc(b.phone||'')}" placeholder="+36 30 123 4567">${(navigator.contacts&&navigator.contacts.select)?`<button class="ib" onclick="pickContact('eP')" aria-label="Névjegyek">${ico('book',22)}</button>`:''}</div>
 <div class="btns"><button class="b2 dg" onclick="bookDel('${id}')" aria-label="Törlés">${ico('trash',20)}</button><button class="b2" onclick="bookPick('${id}')">${ico('pin',18)} Térképen</button><button class="b1" onclick="bookSave('${id}')">Mentés</button></div>`)}
 async function bookSave(id){const b=S.book.find(v=>v.id===id),label=$('#eA').value.trim();if(!label)return;const ch=label!==b.label;closeSheet();
  Object.assign(b,{client:$('#eC').value.trim(),note:$('#eN').value.trim(),phone:$('#eP').value.trim(),label});
@@ -331,27 +332,42 @@ function pasteDlg(){ocrDlg('','Illeszd be a szállítási lista szövegét, majd
 function fixZip(t){const m={O:'0',o:'0',Q:'0',I:'1',l:'1','|':'1',i:'1',S:'5',s:'5',B:'8',Z:'2',z:'2',G:'6',g:'9'};
  if(!/^[0-9OoQIl|iSsBZzGg]{4}$/.test(t)||(t.match(/\d/g)||[]).length<2)return null;
  const r=t.split('').map(c=>/\d/.test(c)?c:(m[c]||c)).join('');return /^[1-9]\d{3}$/.test(r)?r:null}
-function parseOcr(txt){const LET='A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű',L=txt.split('\n').map(s=>s.replace(new RegExp('^[^A-Za-z0-9'+LET.slice(3)+'|]+'),'').trim()).filter(Boolean),out=[];
- const junk=s=>/^T\s?[RB]\s?[O0]?\d{3,}/i.test(s)||/\d{4}\s?\.\s?\d{2}\s?\.\s?\d{2}/.test(s),zl=new RegExp('^(\\S{4})\\s+['+LET+']');
- for(let i=0;i<L.length;i++){const m=L[i].match(new RegExp('^(\\S{4})\\s+(['+LET+'].*)$'));if(!m)continue;const z=fixZip(m[1]);if(!z)continue;
+const LET='A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű';
+// a vevőnév csak akkor marad meg, ha valódi szövegnek látszik (a zajos sorokat üresre cseréli)
+function cleanCust(s){s=String(s||'').replace(/[^A-Za-z0-9ÁÉÍÓÖŐÚÜŰáéíóöőúüű .,&'()\/-]/g,' ').replace(/\s+/g,' ').trim().replace(/^[\dOoIl|]{5,7}\s+/,'');
+ const letters=(s.match(new RegExp('['+LET+']','g'))||[]).length;return s.length>=3&&letters/s.length>=.6&&/[A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű]{3,}/.test(s)?s:''}
+function parseOcr(txt){const L=txt.split('\n').map(s=>s.replace(/^[^A-Za-z0-9ÁÉÍÓÖŐÚÜŰáéíóöőúüű|]+/,'').trim()).filter(Boolean),out=[];
+ const junk=s=>/^T\s?[RB]\s?[O0]?\d{3,}/i.test(s)||/\d{4}\s?\.\s?\d{2}\s?\.\s?\d{2}/.test(s),zl=new RegExp('^(\\S{4})\\s+(['+LET+'].*)$'),pl=new RegExp('^(.*?)\\s*\\|\\s*(\\S{4})\\s+(['+LET+'].*)$');
+ for(let i=0;i<L.length;i++){
+  const pm=L[i].match(pl);if(pm&&fixZip(pm[2])){out.push(cleanCust(pm[1])+' | '+fixZip(pm[2])+' '+pm[3]);continue} // már kinyert sor: változatlanul marad
+  const m=L[i].match(zl);if(!m)continue;const z=fixZip(m[1]);if(!z)continue;
   let nx=L[i+1]||'';if(junk(nx))nx='';else{const m2=nx.match(zl);if(m2&&fixZip(m2[1]))nx=''}
-  out.push(nx.replace(/^[\dOoIl|]{5,7}\s+/,'').trim()+' | '+z+' '+m[2])}
+  out.push(cleanCust(nx)+' | '+z+' '+m[2])}
  return out}
-// kép előkészítése: nagyítás, szürkeárnyalat, automatikus szintezés, (Otsu) kétszínűsítés
-async function prepImage(file,bin){const bmp=await createImageBitmap(file),w=bmp.width,h=bmp.height,k=w>2600?2600/w:Math.max(1,Math.min(2.5,1800/w));
- const cv=document.createElement('canvas');cv.width=Math.round(w*k);cv.height=Math.round(h*k);const c=cv.getContext('2d');c.imageSmoothingQuality='high';c.drawImage(bmp,0,0,cv.width,cv.height);
- const im=c.getImageData(0,0,cv.width,cv.height),d=im.data,n=cv.width*cv.height,g=new Float32Array(n),hist=new Array(256).fill(0);
+// kép előkészítése: méretezés, szürkeárnyalat, szintezés, majd helyi (adaptív) vagy Otsu-kétszínűsítés
+async function prepImage(file,mode){const bmp=await createImageBitmap(file),w=bmp.width,h=bmp.height;
+ let k=Math.max(1,Math.min(2.5,1700/w));if(Math.max(w,h)*k>3600)k=3600/Math.max(w,h);
+ const W=Math.round(w*k),H=Math.round(h*k),cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');c.imageSmoothingQuality='high';c.drawImage(bmp,0,0,W,H);
+ const im=c.getImageData(0,0,W,H),d=im.data,n=W*H;let g=new Float32Array(n);const hist=new Array(256).fill(0);
  for(let i=0;i<n;i++){const v=Math.round(.299*d[4*i]+.587*d[4*i+1]+.114*d[4*i+2]);g[i]=v;hist[v]++}
  let acc=0,lo=0,hi=255;for(let v=0;v<256;v++){acc+=hist[v];if(acc>=n*.02){lo=v;break}}acc=0;for(let v=255;v>=0;v--){acc+=hist[v];if(acc>=n*.02){hi=v;break}}
- const sp=Math.max(1,hi-lo);let mean=0;for(let i=0;i<n;i++){g[i]=Math.max(0,Math.min(255,(g[i]-lo)*255/sp));mean+=g[i]}mean/=n;
- if(mean<110)for(let i=0;i<n;i++)g[i]=255-g[i];
- let thr=128;if(bin){const h2=new Array(256).fill(0);for(let i=0;i<n;i++)h2[g[i]|0]++;let sum=0;for(let t=0;t<256;t++)sum+=t*h2[t];let sB=0,wB=0,best=0;
-  for(let t=0;t<256;t++){wB+=h2[t];if(!wB)continue;const wF=n-wB;if(!wF)break;sB+=t*h2[t];const mB=sB/wB,mF=(sum-sB)/wF,v=wB*wF*(mB-mF)*(mB-mF);if(v>best){best=v;thr=t}}}
- for(let i=0;i<n;i++){let v=g[i];if(bin)v=v>thr?255:0;d[4*i]=d[4*i+1]=d[4*i+2]=v;d[4*i+3]=255}
+ const sp=Math.max(1,hi-lo);let mean=0;for(let i=0;i<n;i++){g[i]=Math.max(0,Math.min(255,(g[i]-lo)*255/sp));mean+=g[i]}mean/=n;if(mean<110)for(let i=0;i<n;i++)g[i]=255-g[i];
+ if(mode==='ad'){ // 3×3 simítás (a képernyőről fotózott kép rácsmintájának csökkentésére), majd a helyi átlagnál sötétebb pontok lesznek feketék
+  const I=new Uint32Array((W+1)*(H+1));for(let y=0;y<H;y++){let row=0;for(let x=0;x<W;x++){row+=g[y*W+x];I[(y+1)*(W+1)+x+1]=I[y*(W+1)+x+1]+row}}
+  const box=(x0,y0,x1,y1)=>{x0=Math.max(0,x0);y0=Math.max(0,y0);x1=Math.min(W,x1);y1=Math.min(H,y1);return(I[y1*(W+1)+x1]-I[y0*(W+1)+x1]-I[y1*(W+1)+x0]+I[y0*(W+1)+x0])/((x1-x0)*(y1-y0))};
+  const r=Math.max(8,Math.round(W/32)),out=new Uint8Array(n);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const s=box(x-1,y-1,x+2,y+2),m=box(x-r,y-r,x+r+1,y+r+1);out[y*W+x]=s<m*.9?0:255}
+  for(let i=0;i<n;i++){d[4*i]=d[4*i+1]=d[4*i+2]=out[i];d[4*i+3]=255}}
+ else{let thr=128;if(mode==='otsu'){const h2=new Array(256).fill(0);for(let i=0;i<n;i++)h2[g[i]|0]++;let sum=0;for(let t=0;t<256;t++)sum+=t*h2[t];let sB=0,wB=0,best=0;
+   for(let t=0;t<256;t++){wB+=h2[t];if(!wB)continue;const wF=n-wB;if(!wF)break;sB+=t*h2[t];const mB=sB/wB,mF=(sum-sB)/wF,v=wB*wF*(mB-mF)*(mB-mF);if(v>best){best=v;thr=t}}}
+  for(let i=0;i<n;i++){let v=g[i];if(mode==='otsu')v=v>thr?255:0;d[4*i]=d[4*i+1]=d[4*i+2]=v;d[4*i+3]=255}}
  c.putImageData(im,0,0);return cv}
-async function ocrImage(file){const W=await Tesseract.createWorker('hun',1,{logger:m=>{if(m.status==='recognizing text'){const s=$('#ocrSt');if(s)s.textContent='Szöveg felismerése… '+Math.round(m.progress*100)+'%'}}});
- try{await W.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1',user_defined_dpi:'300'});let best={text:'',lines:[]};
-  for(const bin of [true,false]){const cv=await prepImage(file,bin),r=await W.recognize(cv),ls=parseOcr(r.data.text);if(ls.length>best.lines.length||!best.text)best={text:r.data.text,lines:ls};if(ls.length>=2)break}
+async function ocrImage(file){const st=t=>{const s=$('#ocrSt');if(s)s.textContent=t};let pass='';
+ const W=await Tesseract.createWorker('hun',1,{logger:m=>{if(m.status==='recognizing text')st('Felismerés '+pass+' · '+Math.round(m.progress*100)+'%')}});
+ try{const cfg=[['ad','6'],['otsu','4'],['gray','6']];let best={text:'',lines:[]};
+  for(let i=0;i<cfg.length;i++){pass=(i+1)+'/'+cfg.length;st('Kép előkészítése '+pass+'…');const cv=await prepImage(file,cfg[i][0]);
+   await W.setParameters({tessedit_pageseg_mode:cfg[i][1],preserve_interword_spaces:'1',user_defined_dpi:'300'});
+   const r=await W.recognize(cv),ls=parseOcr(r.data.text);if(ls.length>best.lines.length||!best.text)best={text:r.data.text,lines:ls};if(ls.length>=4)break}
   return best}finally{await W.terminate()}}
 function ocrDlg(t,st){sheet(`<h3>Címek beolvasása</h3><div class="mu" id="ocrSt" style="font-size:14px">${esc(st)}</div><textarea id="ocrT" rows="9" style="margin-top:10px">${esc(t)}</textarea>
 <div class="btns"><button class="b2" onclick="closeSheet()">Mégse</button><button class="b2" onclick="ocrParse()">Kinyerés</button><button class="b1" onclick="ocrAdd()">Címjegyzékbe</button></div>`)}
@@ -361,12 +377,16 @@ $('#ocrF').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)
   const b=await ocrImage(f);
   ocrDlg(b.lines.length?b.lines.join('\n'):b.text,b.lines.length?b.lines.length+' címet találtam. Javítsd a sorokat (vevő | cím), majd mentsd a címjegyzékbe:':'Nem találtam irányítószámos sort. A felismert szöveg alább. Javítsd kézzel (vevő | irányítószám város utca), vagy másold ki a szöveget a telefon képernyő-szövegfelismerőjével, és használd a Szöveg beillesztése gombot.')}
  catch(err){ocrDlg('','Az OCR nem indult el: '+((err&&err.message)||err)+'. Nézd meg az Állapotot a Beállításokban.')}};
-async function ocrAdd(){const ls=$('#ocrT').value.split('\n').map(s=>s.trim()).filter(Boolean);closeSheet();if(!ls.length)return;let bad=0,apx=0;
- for(let i=0;i<ls.length;i++){toast('Keresés: '+(i+1)+' / '+ls.length);const l=ls[i],p=l.includes('|')?l.split('|'):['',l],cl=p[0].trim(),raw=p.slice(1).join('|').trim();
+async function ocrAdd(){const ls=$('#ocrT').value.split('\n').map(s=>s.trim()).filter(Boolean);closeSheet();if(!ls.length)return;let bad=0,apx=0,fix=0;
+ for(let i=0;i<ls.length;i++){toast('Keresés: '+(i+1)+' / '+ls.length);
+  const l=ls[i],p=l.includes('|')?l.split('|'):['',l],cl=cleanCust(p[0]),raw=p.slice(1).join('|').trim();
   let a=raw.replace(/\([^)]*\)/g,' ').replace(/\s+/g,' ').trim();const z2=a.match(/^\d{4}\s.*?\s(\d{4}\s.+)$/);if(z2)a=z2[1];
-  const t=a.split(' '),city=t[1]||'?';let r=await sug(a),ap=false;if(!r[0]){r=await sug(t[0]+' '+city);ap=true}
-  if(r[0]){bookUpsert({...r[0],city,label:raw+(ap?' (a település közepe)':''),client:cl,apx:ap},true,'beolvasás');if(ap)apx++}else{bookUpsert({label:raw,city,client:cl},true,'beolvasás');bad++}}
- save();go('book');toast(`${ls.length} cím a címjegyzékben`+(apx?`, ${apx} csak településszinten`:'')+(bad?`, ${bad} koordináta nélkül`:''))}
+  const t=a.split(' '),zip=/^\d{4}$/.test(t[0])?t[0]:'',rest=(zip?t.slice(1):t).join(' '),city=t[zip?1:0]||'?';
+  let r=await sug(rest),ap=false;if(!r.length){r=await sug((zip+' '+city).trim());ap=true}
+  const hit=r.find(x=>zip&&String(x.zip).startsWith(zip))||r[0];
+  if(hit){if(zip&&hit.zip&&!String(hit.zip).startsWith(zip))fix++;bookUpsert({...hit,client:cl,raw,apx:ap},true,'beolvasás');if(ap)apx++}
+  else{bookUpsert({label:raw,city,client:cl,raw},true,'beolvasás');bad++}}
+ save();go('book');toast(`${ls.length} cím a címjegyzékben`+(fix?`, ${fix} irányítószámot a keresés javított`:'')+(apx?`, ${apx} csak településszinten`:'')+(bad?`, ${bad} koordináta nélkül`:''))}
 
 // ---------- Térkép (MapLibre + TomTom stílus) ----------
 const loadScript=u=>new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
@@ -442,6 +462,7 @@ function openSettings(){openPage('Beállítások',`<span class="lbl">Navigáció
 <div class="btns"><button class="b1" onclick="setSave()">Mentés</button><button class="b2" onclick="testKey()">Kapcsolat tesztelése</button></div>
 <span class="lbl">Állapot</span><div id="diag" class="mu" style="font-size:14px;line-height:1.7">Ellenőrzés…</div>
 <div class="btns"><button class="b2" onclick="diag()">Újra ellenőriz</button><button class="b1" id="instBtn" style="display:none" onclick="doInstall()">Telepítés</button></div>
+<span class="lbl">Verzió</span><div class="mu" style="font-size:14px">Címsorrend ${VER}</div><div class="btns"><button class="b2" onclick="hardRefresh()">Frissítés keresése</button></div>
 <span class="lbl">Biztonsági mentés</span><div class="btns" style="margin-top:0"><button class="b2" onclick="expo()">Export</button><button class="b2" onclick="$('#imF').click()">Import</button></div>`);
  $('#navSel').value=S.nav;$('#key').value=S.key;$('#width').value=S.width||0;if(instEv)$('#instBtn').style.display='';diag()}
 function setSave(){S.key=$('#key').value.trim();S.nav=$('#navSel').value;S.width=Math.max(0,+$('#width').value||0);save();toast('Beállítások mentve')}
@@ -452,9 +473,9 @@ async function diag(){const o=[],ok=(b,t)=>o.push((b?'✓ ':'✗ ')+t),d=$('#dia
  ok(!!window.maplibregl||await loadAny(MAPLIB,()=>!!window.maplibregl),'Térkép-könyvtár');
  ok(!!window.Tesseract||await loadAny(TESS,()=>!!window.Tesseract),'OCR-motor');
  ok(!!S.key,'TomTom-kulcs megadva'+(S.key?'':' – írd be fent és mentsd'));
- if(S.key){const t=async(u,name,hint)=>{try{const r=await fetch(u);ok(r.ok,name+(r.ok?'':` – hiba ${r.status}${hint||''}`))}catch(e){ok(false,name+' – nem érhető el')}};
+ if(S.key){const t=async(u,name,hint)=>{try{const r=await fetch(u);let m='';if(!r.ok){try{const j=await r.json();m=(j.detailedError&&j.detailedError.message)||(j.error&&j.error.description)||''}catch(e){}}ok(r.ok,name+(r.ok?'':` – hiba ${r.status}${[401,403].includes(r.status)?(hint||''):''}${m?': '+esc(String(m).slice(0,90)):''}`))}catch(e){ok(false,name+' – nem érhető el')}};
   await t(`https://api.tomtom.com/search/2/search/Budapest.json?key=${S.key}&limit=1`,'TomTom címkeresés',' (hibás kulcs vagy hiányzó engedély)');
-  await t(`https://api.tomtom.com/routing/1/calculateRoute/47.4979,19.0402:47.5,19.05/json?key=${S.key}&instructionsType=none`,'TomTom útvonal-adat (Routing API)',' (ehhez az API-hoz nincs engedély?)');
+  await t(`https://api.tomtom.com/routing/1/calculateRoute/47.4979,19.0402:47.5,19.05/json?key=${S.key}&traffic=false`,'TomTom útvonal-adat (Routing API)',' (ehhez az API-hoz nincs engedély?)');
   await t(`https://api.tomtom.com/map/1/style/20.0.0-8/basic_main.json?key=${S.key}`,'TomTom térképstílus',' (a kulcsnak a Map Display API kell)')}
  const dd=$('#diag');if(dd)dd.innerHTML=o.join('<br>')}
 function expo(){const b=new Blob([JSON.stringify({lists:S.lists,book:S.book,current:snap()},null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cimsorrend-mentes.json';a.click()}
@@ -462,14 +483,18 @@ $('#imF').onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;const b=$('#instBtn');if(b)b.style.display=''});
 async function doInstall(){if(!instEv)return;instEv.prompt();await instEv.userChoice;instEv=null;const b=$('#instBtn');if(b)b.style.display='none'}
 window.addEventListener('appinstalled',()=>toast('Telepítve a kezdőképernyőre'));
-if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator&&location.protocol!=='file:'){const had=!!navigator.serviceWorker.controller;let rl=false;
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!rl){rl=true;location.reload()}});
+ navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{})}
+async function hardRefresh(){try{const rs=await navigator.serviceWorker.getRegistrations();for(const r of rs)await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch(e){}location.reload()}
 
 // ---------- folyosó–ág optimalizáló (A → B → C) ----------
-async function routeAlt(a,b){if(!S.key)return null;
+var routeErr='';
+async function routeAlt(a,b){if(!S.key){routeErr='nincs kulcs';return null}routeErr='';
  try{const r=await fetch(`https://api.tomtom.com/routing/1/calculateRoute/${a.lat},${a.lon}:${b.lat},${b.lon}/json?key=${S.key}&maxAlternatives=2&routeType=fastest&traffic=false&travelMode=car`);
-  if(!r.ok)return null;const j=await r.json();
+  if(!r.ok){routeErr='HTTP '+r.status;return null}const j=await r.json();
   const rs=(j.routes||[]).map(x=>({pts:x.legs.flatMap(l=>l.points.map(p=>({lat:p.latitude,lon:p.longitude})))})).filter(x=>x.pts.length>1);
-  return rs.length?rs:null}catch(e){return null}}
+  if(!rs.length)routeErr='üres válasz';return rs.length?rs:null}catch(e){routeErr='nincs hálózat';return null}}
 function mkPoly(pts,xy){const P=pts.map(xy),cum=[0];for(let i=1;i<P.length;i++)cum.push(cum[i-1]+Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y));return{P,cum}}
 function proj(poly,q){let bd=Infinity,bs=0;const P=poly.P;
  for(let i=1;i<P.length;i++){const ax=P[i-1].x,ay=P[i-1].y,dx=P[i].x-ax,dy=P[i].y-ay,l2=dx*dx+dy*dy;let t=l2?((q.x-ax)*dx+(q.y-ay)*dy)/l2:0;t=Math.max(0,Math.min(1,t));
@@ -514,7 +539,7 @@ async function optimize(keep){const pend=S.addrs.filter(a=>!a.done&&a.lat!=null)
  if(keep){const cur=S.order.filter(id=>pend.some(a=>a.id==id)),locked=new Map();cur.forEach((id,i)=>{if(byId(id).lock)locked.set(i,id)});
   const lk=[...locked.values()],free=ord.filter(id=>!lk.includes(id));ord=cur.map((_,i)=>locked.has(i)?locked.get(i):free.shift())}
  else S.addrs.forEach(a=>a.lock=false);
- finishOrder(ord);S.dirty=false;S.bId=B.id;S.sum=`B: ${B.city} · ${cor.length} cím a folyosón · ${off.length} cím ágon`+(offline?' · úthálózat nélkül (légvonal)':'');
+ finishOrder(ord);S.dirty=false;S.bId=B.id;S.sum=`B: ${B.city} · ${cor.length} cím a folyosón · ${off.length} cím ágon`+(offline?' · úthálózat nélkül (légvonal'+(routeErr?', '+routeErr:'')+')':'');
  save();renderRoute();toast('Sorrend elkészült. '+S.sum)}
 function finishOrder(ord){const done=S.order.filter(id=>byId(id)&&byId(id).done),nc=S.addrs.filter(a=>!a.done&&a.lat==null).map(a=>a.id);
  const all=[...done,...ord,...nc];S.addrs.forEach(a=>{if(!all.includes(a.id))all.push(a.id)});S.order=all}
