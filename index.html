@@ -119,7 +119,7 @@ textarea{resize:none}
  <div id="map"></div><div id="msheet"></div>
 </section>
 <section class="view" id="v-book">
- <div class="hd"><div><h1>Címjegyzék</h1><div class="sb" id="bk-sub"></div></div><div class="tools"><button class="ib" id="bcam" onclick="$('#ocrF').click()" aria-label="Fénykép"></button><button class="ib" id="bpaste" onclick="pasteDlg()" aria-label="Szöveg"></button></div></div>
+ <div class="hd"><div><h1>Címjegyzék</h1><div class="sb" id="bk-sub"></div></div><div class="tools"><button class="ib" id="bcam" onclick="scanMenu()" aria-label="Fénykép"></button><button class="ib" id="bpaste" onclick="pasteDlg()" aria-label="Szöveg"></button></div></div>
  <div style="padding:0 18px"><div class="in"><span id="ic-s2"></span><input id="bq" placeholder="Keresés a címjegyzékben" autocomplete="off"><button class="ib" id="mic2" onclick="voice('bq')" aria-label="Hang"></button></div></div>
  <div class="scroll" id="bk-body" style="padding-top:6px"></div>
  <div id="bookbar"><button class="b2 dg" id="bkdel" onclick="selDelete()"></button><button class="b1" id="bkadd" onclick="selAdd()"></button></div>
@@ -129,14 +129,14 @@ textarea{resize:none}
 </div>
 <div id="scrim" onclick="closeSheet()"></div><div id="sheet"></div><div id="page"></div>
 <div id="toast"><span id="tm" style="flex:1"></span><button id="tb"></button></div>
-<input type="file" id="ocrF" accept="image/*" hidden><input type="file" id="imF" accept=".json" hidden>
+<input type="file" id="ocrF" accept="image/*" hidden><input type="file" id="camF" accept="image/*" capture="environment" hidden><input type="file" id="imF" accept=".json" hidden>
 <script>
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const MAPLIB=['https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js','https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js'];
 const TESS=['https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js','https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js'];
 var map=null,mapReady=false,markers=[],lastN=-1,pick=null,EDIT=false,TAB='route',SEL=new Set(),SRL=[],KS=[],XT=null,askRes=null,instEv=null,drag=null,lastTE=0;
-const VER='v11';
+const VER='v14';
 const DEF=()=>({key:'',nav:'gm',width:0,back:false,start:null,end:null,addrs:[],order:[],lists:{},book:[],cur:'',sum:'',dirty:false,bId:''});
 let S=Object.assign(DEF(),(()=>{try{return JSON.parse(localStorage.getItem('cs_state'))||{}}catch(e){return{}}})());
 S.lists=S.lists||{};S.addrs=S.addrs||[];S.order=S.order||[];S.book=S.book||[];
@@ -173,7 +173,7 @@ let tt;function toast(m,lab,fn){$('#tm').textContent=m;const b=$('#tb');$('#toas
 function sheet(h){$('#sheet').innerHTML='<div class="grab"></div>'+h;$('#sheet').classList.add('on');$('#scrim').classList.add('on')}
 function closeSheet(){$('#sheet').classList.remove('on');$('#scrim').classList.remove('on');if(askRes){const r=askRes;askRes=null;r(false)}}
 function openPage(title,body,foot){$('#page').innerHTML=`<div class="phd"><button class="ib" id="pb" aria-label="Vissza">${ico('back',24)}</button><div class="pt">${esc(title)}</div></div><div class="pbody">${body}</div>${foot?`<div class="pfoot">${foot}</div>`:''}`;$('#page').classList.add('on');$('#pb').onclick=closePage}
-function closePage(){$('#page').classList.remove('on')}
+function closePage(){$('#page').classList.remove('on');camStop()}
 function ask(title,msg,ok,danger){return new Promise(res=>{askRes=res;sheet(`<h3>${esc(title)}</h3><p class="mu" style="margin:0">${esc(msg)}</p><div class="btns"><button class="b2" onclick="closeSheet()">Mégse</button><button class="b1 ${danger?'dg':''}" id="aY">${esc(ok)}</button></div>`);$('#aY').onclick=()=>{askRes=null;closeSheet();res(true)}})}
 function askText(title,val,ok){return new Promise(res=>{askRes=r=>res(null);sheet(`<h3>${esc(title)}</h3><input id="aT" value="${esc(val||'')}"><div class="btns"><button class="b2" onclick="closeSheet()">Mégse</button><button class="b1" id="aY">${esc(ok||'Mentés')}</button></div>`);$('#aY').onclick=()=>{const v=$('#aT').value.trim();askRes=null;closeSheet();res(v||null)}})}
 document.addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(b){b.classList.add('p');hap(18);setTimeout(()=>b.classList.remove('p'),1200)}});
@@ -220,7 +220,12 @@ function callNum(p){const ns=String(p||'').split(/[;,\/]|\svagy\s/i).map(s=>s.tr
  if(!ns.length){toast('Nincs telefonszám megadva');return}
  if(ns.length===1){location.href='tel:'+ns[0].replace(/[^\d+]/g,'');return}
  sheet('<h3>Hívás</h3>'+ns.map(n=>`<button class="opt" onclick="closeSheet();location.href='tel:${n.replace(/[^\d+]/g,'')}'">${ico('phone',22)} ${esc(n)}</button>`).join(''))}
-async function pickContact(inId){try{const r=await navigator.contacts.select(['name','tel'],{multiple:false});if(r&&r[0]){const t=(r[0].tel||[]).join(', ');$('#'+inId).value=t;if(!t)toast('A névjegynek nincs telefonszáma')}}catch(e){toast('A névjegyválasztás nem sikerült')}}
+let pcBusy=false;
+async function pickContact(inId){if(pcBusy)return;pcBusy=true;toast('Névjegyek megnyitása… (nagy névjegylistánál a telefon lassan töltheti be)');
+ try{const r=await navigator.contacts.select(['name','tel'],{multiple:false});$('#toast').style.display='none';
+  if(r&&r[0]){const t=[...new Set(r[0].tel||[])].join(', ');$('#'+inId).value=t;const nm=(r[0].name||[])[0],ci=$(inId==='dP'?'#dC':'#eC');if(nm&&ci&&!ci.value.trim())ci.value=nm;if(!t)toast('A névjegynek nincs telefonszáma')}}
+ catch(e){$('#toast').style.display='none'}finally{pcBusy=false}}
+async function pastePhone(inId){try{const t=await navigator.clipboard.readText(),m=String(t).match(/\+?\d[\d\s\-()\/]{6,}\d/);if(m){$('#'+inId).value=m[0].trim();toast('Telefonszám beillesztve')}else toast('A vágólapon nincs telefonszám')}catch(e){toast('A vágólap nem érhető el')}}
 function nav(id){const a=byId(id);if(!a)return;if(a.lat==null){toast('Ehhez a megállóhoz nincs koordináta');return}
  const u={gm:`https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lon}&travelmode=driving`,wz:`https://waze.com/ul?ll=${a.lat},${a.lon}&navigate=yes`,geo:`geo:${a.lat},${a.lon}?q=${a.lat},${a.lon}(${encodeURIComponent(a.client||a.label)})`}[S.nav]||'';
  const w=window.open(u,'_blank');if(!w)location.href=u}
@@ -255,7 +260,7 @@ async function newRoute(){if(!S.addrs.length){toast('Nincs törölnivaló útvon
 // ---------- megálló felvétele és szerkesztése ----------
 function stopSheet(x,id){const a=id?byId(id):null,d=a||x;XT=x;
  sheet(`<h3>${a?'Megálló szerkesztése':'Új megálló'}</h3><span class="lbl" style="margin-top:8px">Cím</span><textarea id="dA" rows="2">${esc(d.label)}</textarea>
-<span class="lbl">Vevő vagy vállalkozás neve</span><input id="dC" value="${esc(a?a.client:(x&&x.client)||'')}"><span class="lbl">Jegyzet</span><input id="dN" value="${esc(a?a.note||'':(x&&x.note)||'')}"><span class="lbl">Telefonszám</span><div class="in" style="margin-top:0"><input id="dP" type="tel" inputmode="tel" value="${esc(a?a.phone||'':(x&&x.phone)||'')}" placeholder="+36 30 123 4567">${(navigator.contacts&&navigator.contacts.select)?`<button class="ib" onclick="pickContact('dP')" aria-label="Névjegyek">${ico('book',22)}</button>`:''}</div>
+<span class="lbl">Vevő vagy vállalkozás neve</span><input id="dC" value="${esc(a?a.client:(x&&x.client)||'')}"><span class="lbl">Jegyzet</span><input id="dN" value="${esc(a?a.note||'':(x&&x.note)||'')}"><span class="lbl">Telefonszám</span><div class="in" style="margin-top:0"><input id="dP" type="tel" inputmode="tel" value="${esc(a?a.phone||'':(x&&x.phone)||'')}" placeholder="+36 30 123 4567"><button class="ib" onclick="pastePhone('dP')" aria-label="Beillesztés">${ico('paste',22)}</button>${(navigator.contacts&&navigator.contacts.select)?`<button class="ib" onclick="pickContact('dP')" aria-label="Névjegyek">${ico('book',22)}</button>`:''}</div>
 <div class="mu" style="margin-top:10px;font-size:13px">${d.lat!=null?'A hely megvan':'Nincs koordináta, a lista végére kerül'}</div>
 <div class="btns"><button class="b2" onclick="closeSheet()">Mégse</button>${a?`<button class="b2" onclick="pickEdit('${a.id}')">${ico('pin',18)} Térképen</button>`:''}<button class="b1" onclick="stopSave('${id||''}')">${a?'Mentés':'Hozzáad'}</button></div>`)}
 const editStop=id=>stopSheet(null,id);
@@ -288,7 +293,7 @@ function voice(inId){const R=window.SpeechRecognition||window.webkitSpeechRecogn
 
 // ---------- Hozzáadás ----------
 function renderQuick(){const row=(ic,t,s,fn)=>`<button class="rowi" onclick="${fn}">${ico(ic,22)}<span class="t"><b>${t}</b><small>${s}</small></span>${ico('chev',18)}</button>`;
- $('#quick').innerHTML=`<span class="lbl">Más módon</span>`+row('cam','Fénykép a címjegyzékbe','A beolvasott címek szerkeszthetők','$(\'#ocrF\').click()')+row('paste','Szöveg beillesztése','Szállítási lista másolása','pasteDlg()')+row('loc','Jelenlegi hely','','addHere()')+row('pin','Koordináták','Szélesség, hosszúság','coordDlg()')+row('edit','Kézi rögzítés','Ha nincs találat','manualAdd()')}
+ $('#quick').innerHTML=`<span class="lbl">Más módon</span>`+row('cam','Fénykép a címjegyzékbe','A beolvasott címek szerkeszthetők','scanMenu()')+row('paste','Szöveg beillesztése','Szállítási lista másolása','pasteDlg()')+row('loc','Jelenlegi hely','','addHere()')+row('pin','Koordináták','Szélesség, hosszúság','coordDlg()')+row('edit','Kézi rögzítés','Ha nincs találat','manualAdd()')}
 function bookFind(q){const t=q.toLowerCase().split(/\s+/).filter(Boolean);return S.book.filter(b=>{const s=((b.client||'')+' '+b.label).toLowerCase();return t.every(w=>s.includes(w))}).slice(0,4)}
 let qt;document.addEventListener('input',e=>{if(e.target.id!=='q')return;clearTimeout(qt);const q=e.target.value.trim(),box=$('#sug');
  if(q.length<2){box.innerHTML='';$('#quick').style.display='block';return}$('#quick').style.display='none';
@@ -320,7 +325,7 @@ function selTog(id){SEL.has(id)?SEL.delete(id):SEL.add(id);renderBook()}
 function selClear(){SEL.clear();renderBook()}
 function selAdd(){let n=0;[...SEL].forEach(id=>{const b=S.book.find(v=>v.id===id);if(b){mkAddr(b,b.client,b.note,b.id);n++}});SEL.clear();save();go('route');toast(n+' megálló az útvonalon')}
 function editBook(id){const b=S.book.find(v=>v.id===id);if(!b)return;
- sheet(`<h3>Címjegyzék-bejegyzés</h3><span class="lbl" style="margin-top:8px">Cím</span><textarea id="eA" rows="2">${esc(b.label)}</textarea>${b.raw?`<div class="mu" style="font-size:12.5px;margin-top:6px">Beolvasott szöveg: ${esc(b.raw)}</div>`:''}<span class="lbl">Vevő vagy vállalkozás neve</span><input id="eC" value="${esc(b.client)}"><span class="lbl">Jegyzet</span><input id="eN" value="${esc(b.note)}"><span class="lbl">Telefonszám</span><div class="in" style="margin-top:0"><input id="eP" type="tel" inputmode="tel" value="${esc(b.phone||'')}" placeholder="+36 30 123 4567">${(navigator.contacts&&navigator.contacts.select)?`<button class="ib" onclick="pickContact('eP')" aria-label="Névjegyek">${ico('book',22)}</button>`:''}</div>
+ sheet(`<h3>Címjegyzék-bejegyzés</h3><span class="lbl" style="margin-top:8px">Cím</span><textarea id="eA" rows="2">${esc(b.label)}</textarea>${b.raw?`<div class="mu" style="font-size:12.5px;margin-top:6px">Beolvasott szöveg: ${esc(b.raw)}</div>`:''}<span class="lbl">Vevő vagy vállalkozás neve</span><input id="eC" value="${esc(b.client)}"><span class="lbl">Jegyzet</span><input id="eN" value="${esc(b.note)}"><span class="lbl">Telefonszám</span><div class="in" style="margin-top:0"><input id="eP" type="tel" inputmode="tel" value="${esc(b.phone||'')}" placeholder="+36 30 123 4567"><button class="ib" onclick="pastePhone('eP')" aria-label="Beillesztés">${ico('paste',22)}</button>${(navigator.contacts&&navigator.contacts.select)?`<button class="ib" onclick="pickContact('eP')" aria-label="Névjegyek">${ico('book',22)}</button>`:''}</div>
 <div class="btns"><button class="b2 dg" onclick="bookDel('${id}')" aria-label="Törlés">${ico('trash',20)}</button><button class="b2" onclick="bookPick('${id}')">${ico('pin',18)} Térképen</button><button class="b1" onclick="bookSave('${id}')">Mentés</button></div>`)}
 async function bookSave(id){const b=S.book.find(v=>v.id===id),label=$('#eA').value.trim();if(!label)return;const ch=label!==b.label;closeSheet();
  Object.assign(b,{client:$('#eC').value.trim(),note:$('#eN').value.trim(),phone:$('#eP').value.trim(),label});
@@ -345,13 +350,53 @@ function parseOcr(txt){const L=txt.split('\n').map(s=>s.replace(/^[^A-Za-z0-9Á�
   out.push(cleanCust(nx)+' | '+z+' '+m[2])}
  return out}
 // kép előkészítése: méretezés, szürkeárnyalat, szintezés, majd helyi (adaptív) vagy Otsu-kétszínűsítés
-async function prepImage(file,mode){const bmp=await createImageBitmap(file),w=bmp.width,h=bmp.height;
+// ferde kép kiegyenesítése: a vízszintes sorok vetületének szórása akkor a legnagyobb, ha a sorok vízszintesek
+function deskewGray(g,W,H){try{
+ const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+ const src=mk(W,H),sc=src.getContext('2d'),im=sc.createImageData(W,H),d=im.data;for(let i=0;i<W*H;i++){const v=g[i];d[4*i]=d[4*i+1]=d[4*i+2]=v;d[4*i+3]=255}sc.putImageData(im,0,0);
+ const k=Math.min(1,520/W),w=Math.round(W*k),h=Math.round(H*k),t=mk(w,h),c=t.getContext('2d');
+ const score=a=>{c.save();c.fillStyle='#fff';c.fillRect(0,0,w,h);c.translate(w/2,h/2);c.rotate(a*Math.PI/180);c.drawImage(src,-w/2,-h/2,w,h);c.restore();
+  const p=c.getImageData(0,0,w,h).data,rows=new Float64Array(h);let m=0;for(let y=0;y<h;y++){let s=0;for(let x=0;x<w;x++)if(p[4*(y*w+x)]<110)s++;rows[y]=s;m+=s}m/=h;let v=0;for(let y=0;y<h;y++)v+=(rows[y]-m)*(rows[y]-m);return v};
+ let best=0,bv=-1;for(let a=-7;a<=7;a+=1){const v=score(a);if(v>bv){bv=v;best=a}}
+ const c0=best;for(let a=c0-.75;a<=c0+.75;a+=.25){const v=score(a);if(v>bv){bv=v;best=a}}
+ if(Math.abs(best)<.4)return g;
+ const o=mk(W,H),oc=o.getContext('2d');oc.fillStyle='#fff';oc.fillRect(0,0,W,H);oc.translate(W/2,H/2);oc.rotate(best*Math.PI/180);oc.drawImage(src,-W/2,-H/2);
+ const r=oc.getImageData(0,0,W,H).data,out=new Float32Array(W*H);for(let i=0;i<W*H;i++)out[i]=r[4*i];return out}catch(e){return g}}
+// élő kamera kerettel: a keret belseje kerül felismerésre, így a háttér nem zavar
+var camStream=null,OCR_APPEND=false,OCR_TXT='';
+async function camOpen(){
+ openPage('Fénykép a listáról',`<div style="position:relative;height:62dvh;background:#000;border-radius:14px;overflow:hidden;margin-top:8px"><video id="camv" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover"></video><div style="position:absolute;inset:6% 4%;border:2px solid #f4b740;border-radius:10px;pointer-events:none"></div></div>
+<p class="mu" style="font-size:13.5px;margin-top:10px">A lista szövege töltse ki a keretet. Tartsd a telefont párhuzamosan a képernyővel, kerüld a tükröződést, és állítsd a másik képernyő fényerejét magasra. Hosszú listát több képben vegyél fel.</p>`,
+ `<div class="btns" style="margin:0"><button class="b2" onclick="camNative()">Kamera-app</button><button class="b1" onclick="camShot()">Fénykép</button></div>`);
+ try{camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:3840},height:{ideal:2160}},audio:false});$('#camv').srcObject=camStream}
+ catch(e){toast('A kamera nem indult el. Használd a Kamera-app gombot.')}}
+function camStop(){if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}}
+function camNative(){camStop();closePage();$('#camF').click()}
+function camShot(){const v=$('#camv');if(!camStream||!v||!v.videoWidth){toast('A kamera még nem kész');return}
+ const vw=v.videoWidth,vh=v.videoHeight,cw=v.clientWidth,ch=v.clientHeight,s=Math.max(cw/vw,ch/vh),ox=(vw*s-cw)/2,oy=(vh*s-ch)/2;
+ const sx=(ox+cw*.04)/s,sy=(oy+ch*.06)/s,sw=cw*.92/s,sh=ch*.88/s,cv=document.createElement('canvas');cv.width=Math.round(sw);cv.height=Math.round(sh);
+ cv.getContext('2d').drawImage(v,sx,sy,sw,sh,0,0,cv.width,cv.height);const ap=OCR_APPEND;OCR_APPEND=false;camStop();closePage();hap(30);ocrFlow(cv,ap)}
+function scanMenu(){sheet(`<h3>Címek beolvasása</h3>
+<button class="opt" onclick="closeSheet();camOpen()">${ico('cam',22)} Fénykép a kamerával (kerettel)</button>
+<button class="opt" onclick="closeSheet();$('#camF').click()">${ico('cam',22)} Fénykép a telefon kamera-appjával</button>
+<button class="opt" onclick="closeSheet();$('#ocrF').click()">${ico('book',22)} Kép a galériából</button>
+<button class="opt" onclick="pasteDlg()">${ico('paste',22)} Szöveg beillesztése</button>`)}
+function ocrMore(){OCR_TXT=($('#ocrT')?$('#ocrT').value:OCR_TXT);OCR_APPEND=true;scanMenu()}
+// A képet több módon próbáljuk megnyitni: kicsinyítve dekódolva, eredeti méretben, majd <img> elemen keresztül
+async function decodeImg(file){
+ if(file&&file.getContext)return file;
+ const tries=[()=>createImageBitmap(file,{resizeWidth:2000,resizeQuality:'high'}),()=>createImageBitmap(file),
+  ()=>new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{URL.revokeObjectURL(u);ok(im)};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error('betöltési hiba'))};im.src=u})];
+ for(const t of tries){try{const r=await t();if((r.width||r.naturalWidth)>0)return r}catch(e){}}
+ throw new Error('A képet nem sikerült megnyitni. Lehet, hogy HEIC formátumú, túl nagy, vagy a felhőből még nincs letöltve a telefonra. Készíts róla képernyőképet, vagy használd a Szöveg beillesztése gombot')}
+async function prepImage(file,mode){const bmp=await decodeImg(file),w=bmp.width||bmp.naturalWidth,h=bmp.height||bmp.naturalHeight;
  let k=Math.max(1,Math.min(2.5,1700/w));if(Math.max(w,h)*k>3600)k=3600/Math.max(w,h);
- const W=Math.round(w*k),H=Math.round(h*k),cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');c.imageSmoothingQuality='high';c.drawImage(bmp,0,0,W,H);
+ const W=Math.round(w*k),H=Math.round(h*k),cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');c.imageSmoothingQuality='high';c.drawImage(bmp,0,0,W,H);if(bmp.close)bmp.close();
  const im=c.getImageData(0,0,W,H),d=im.data,n=W*H;let g=new Float32Array(n);const hist=new Array(256).fill(0);
  for(let i=0;i<n;i++){const v=Math.round(.299*d[4*i]+.587*d[4*i+1]+.114*d[4*i+2]);g[i]=v;hist[v]++}
  let acc=0,lo=0,hi=255;for(let v=0;v<256;v++){acc+=hist[v];if(acc>=n*.02){lo=v;break}}acc=0;for(let v=255;v>=0;v--){acc+=hist[v];if(acc>=n*.02){hi=v;break}}
  const sp=Math.max(1,hi-lo);let mean=0;for(let i=0;i<n;i++){g[i]=Math.max(0,Math.min(255,(g[i]-lo)*255/sp));mean+=g[i]}mean/=n;if(mean<110)for(let i=0;i<n;i++)g[i]=255-g[i];
+ g=deskewGray(g,W,H);
  if(mode==='ad'){ // 3×3 simítás (a képernyőről fotózott kép rácsmintájának csökkentésére), majd a helyi átlagnál sötétebb pontok lesznek feketék
   const I=new Uint32Array((W+1)*(H+1));for(let y=0;y<H;y++){let row=0;for(let x=0;x<W;x++){row+=g[y*W+x];I[(y+1)*(W+1)+x+1]=I[y*(W+1)+x+1]+row}}
   const box=(x0,y0,x1,y1)=>{x0=Math.max(0,x0);y0=Math.max(0,y0);x1=Math.min(W,x1);y1=Math.min(H,y1);return(I[y1*(W+1)+x1]-I[y0*(W+1)+x1]-I[y1*(W+1)+x0]+I[y0*(W+1)+x0])/((x1-x0)*(y1-y0))};
@@ -369,14 +414,18 @@ async function ocrImage(file){const st=t=>{const s=$('#ocrSt');if(s)s.textConten
    await W.setParameters({tessedit_pageseg_mode:cfg[i][1],preserve_interword_spaces:'1',user_defined_dpi:'300'});
    const r=await W.recognize(cv),ls=parseOcr(r.data.text);if(ls.length>best.lines.length||!best.text)best={text:r.data.text,lines:ls};if(ls.length>=4)break}
   return best}finally{await W.terminate()}}
-function ocrDlg(t,st){sheet(`<h3>Címek beolvasása</h3><div class="mu" id="ocrSt" style="font-size:14px">${esc(st)}</div><textarea id="ocrT" rows="9" style="margin-top:10px">${esc(t)}</textarea>
-<div class="btns"><button class="b2" onclick="closeSheet()">Mégse</button><button class="b2" onclick="ocrParse()">Kinyerés</button><button class="b1" onclick="ocrAdd()">Címjegyzékbe</button></div>`)}
+function ocrDlg(t,st){OCR_TXT=t;sheet(`<h3>Címek beolvasása</h3><div class="mu" id="ocrSt" style="font-size:14px">${esc(st)}</div><textarea id="ocrT" rows="9" style="margin-top:10px">${esc(t)}</textarea>
+<div class="btns"><button class="b2" onclick="ocrMore()">${ico('cam',18)} Még egy fotó</button><button class="b2" onclick="ocrParse()">Kinyerés</button></div>
+<div class="btns" style="margin-top:10px"><button class="b2" onclick="closeSheet()">Mégse</button><button class="b1" onclick="ocrAdd()">Címjegyzékbe</button></div>`)}
 function ocrParse(){const L=parseOcr($('#ocrT').value);if(L.length){$('#ocrT').value=L.join('\n');$('#ocrSt').textContent=L.length+' cím kinyerve (vevő | cím). Javítsd, ha kell.'}else $('#ocrSt').textContent='Nem találtam irányítószámmal kezdődő sort.'}
-$('#ocrF').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;ocrDlg('','Kép előkészítése…');
+async function ocrFlow(src,append){const prev=append?OCR_TXT:'';ocrDlg(prev,'Kép előkészítése…');
  try{if(!await loadAny(TESS,()=>!!window.Tesseract))throw new Error('az OCR-motor nem töltődött be');
-  const b=await ocrImage(f);
-  ocrDlg(b.lines.length?b.lines.join('\n'):b.text,b.lines.length?b.lines.length+' címet találtam. Javítsd a sorokat (vevő | cím), majd mentsd a címjegyzékbe:':'Nem találtam irányítószámos sort. A felismert szöveg alább. Javítsd kézzel (vevő | irányítószám város utca), vagy másold ki a szöveget a telefon képernyő-szövegfelismerőjével, és használd a Szöveg beillesztése gombot.')}
- catch(err){ocrDlg('','Az OCR nem indult el: '+((err&&err.message)||err)+'. Nézd meg az Állapotot a Beállításokban.')}};
+  const b=await ocrImage(src),merged=[prev.trim(),b.lines.join('\n')].filter(Boolean).join('\n');
+  if(b.lines.length)ocrDlg(merged,b.lines.length+' új címet találtam. Javítsd a sorokat (vevő | cím). A Még egy fotóval folytathatod a listát:');
+  else ocrDlg(prev||b.text,prev?'Ebből a képből nem találtam címsort. Próbáld közelebbről, vagy javítsd kézzel.':'Nem találtam irányítószámos sort. A felismert szöveg alább. Javítsd kézzel (vevő | irányítószám város utca), vagy készíts új fotót.')}
+ catch(err){ocrDlg(prev,'Az OCR nem indult el: '+((err&&err.message)||err))}}
+const onImg=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const ap=OCR_APPEND;OCR_APPEND=false;ocrFlow(f,ap)};
+$('#ocrF').onchange=onImg;$('#camF').onchange=onImg;
 async function ocrAdd(){const ls=$('#ocrT').value.split('\n').map(s=>s.trim()).filter(Boolean);closeSheet();if(!ls.length)return;let bad=0,apx=0,fix=0;
  for(let i=0;i<ls.length;i++){toast('Keresés: '+(i+1)+' / '+ls.length);
   const l=ls[i],p=l.includes('|')?l.split('|'):['',l],cl=cleanCust(p[0]),raw=p.slice(1).join('|').trim();
