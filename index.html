@@ -107,6 +107,9 @@ textarea{resize:none}
 #toast{display:none;position:fixed;left:16px;right:16px;bottom:calc(86px + env(safe-area-inset-bottom));background:var(--toastbg);color:var(--toasttx);padding:12px 14px;border-radius:14px;gap:10px;align-items:center;z-index:70;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 #toast button{flex:none;background:var(--toasttx);color:var(--toastbg);border-radius:9px;padding:8px 12px;font-weight:500}
 .maplibregl-ctrl-attrib{font-size:10px}
+.cterr{margin-top:8px;padding:10px 12px;border:1px solid var(--ln);border-radius:var(--r);background:var(--s2);font-size:13.5px}
+.cterr .btns{margin-top:10px;flex-wrap:wrap}.cterr .btns>*{flex:1 1 auto}
+.ctd{white-space:pre-wrap;word-break:break-all;font-size:12px;color:var(--mu);margin-top:8px;-webkit-user-select:text;user-select:text}
 </style></head><body>
 <div id="app"><main>
 <section class="view on" id="v-route">
@@ -151,7 +154,7 @@ const loadCss=u=>new Promise((ok,no)=>{const l=document.createElement('link');l.
 const MAPLIB=['https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js','https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js'];
 const TESS=['https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js','https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js'];
 var map=null,mapReady=false,markers=[],lastN=-1,pick=null,EDIT=false,TAB='route',SEL=new Set(),SRL=[],KS=[],XT=null,askRes=null,instEv=null,drag=null,lastTE=0;
-const VER='v17';
+const VER='v17.1';
 const DEF=()=>({key:'',nav:'gm',width:0,back:false,start:null,end:null,addrs:[],order:[],lists:{},book:[],log:[],theme:'dark',mapMode:'auto',mapDone:true,mapLine:true,cur:'',sum:'',dirty:false,bId:''});
 let S=Object.assign(DEF(),(()=>{try{return JSON.parse(localStorage.getItem('cs_state'))||{}}catch(e){return{}}})());
 S.lists=S.lists||{};S.addrs=S.addrs||[];S.order=S.order||[];S.book=S.book||[];S.log=S.log||[];
@@ -238,11 +241,72 @@ function callNum(p){const ns=String(p||'').split(/[;,\/]|\svagy\s/i).map(s=>s.tr
  if(!ns.length){toast('Nincs telefonszám megadva');return}
  if(ns.length===1){location.href='tel:'+ns[0].replace(/[^\d+]/g,'');return}
  sheet('<h3>Hívás</h3>'+ns.map(n=>`<button class="opt" onclick="closeSheet();location.href='tel:${n.replace(/[^\d+]/g,'')}'">${ico('phone',22)} ${esc(n)}</button>`).join(''))}
-let pcBusy=false;
-async function pickContact(inId){if(pcBusy)return;pcBusy=true;toast('Névjegyek megnyitása… (nagy névjegylistánál a telefon lassan töltheti be)');
- try{const r=await navigator.contacts.select(['name','tel'],{multiple:false});$('#toast').style.display='none';
-  if(r&&r[0]){const t=[...new Set(r[0].tel||[])].join(', ');$('#'+inId).value=t;const nm=(r[0].name||[])[0],ci=$(inId==='dP'?'#dC':'#eC');if(nm&&ci&&!ci.value.trim())ci.value=nm;if(!t)toast('A névjegynek nincs telefonszáma')}}
- catch(e){$('#toast').style.display='none'}finally{pcBusy=false}}
+// ---------- névjegyválasztás (Contact Picker): hibakezelés, tartalék, diagnosztika ----------
+var pcBusy=0,ctLast='',ctPend={};
+const ctDigits=s=>String(s||'').replace(/\D/g,'');
+function ctPanel(inId,h){const el=$('#ct-'+inId);if(!el)return;el.innerHTML=h||'';el.style.display=h?'block':'none'}
+// környezeti adatok a hibakereséshez (a hiba nevével, kódjával és üzenetével együtt)
+function ctEnv(e){const n=navigator,w=window,ua=String(n.userAgent||'');let top='?';try{top=w.top===w?'igen':'nem'}catch(x){top='nem (keresztező)'}
+ let dm='?';try{dm=w.matchMedia&&w.matchMedia('(display-mode: standalone)').matches?'standalone':'böngésző'}catch(x){}
+ return['Idő: '+new Date().toISOString(),
+  'Hiba: '+(e?((e.name||'?')+' / kód '+(e.code===undefined?'–':e.code)+' / '+(e.message||'–')):'nincs'),
+  'navigator.contacts: '+('contacts' in n?'van':'nincs'),
+  'contacts.select: '+(n.contacts?typeof n.contacts.select:'–'),
+  'ContactsManager: '+('ContactsManager' in w?'van':'nincs'),
+  'Biztonságos kontextus: '+(w.isSecureContext?'igen':'nem'),
+  'Fő ablak: '+top,
+  'Megjelenítés: '+dm,
+  'Referrer: '+String(document.referrer||'üres').slice(0,80),
+  'WebView-jel az UA-ban (wv): '+(/;\s*wv\)/.test(ua)?'igen':'nem'),
+  'UA: '+ua.slice(0,200)]}
+function ctMsg(e,un){const n=(e&&e.name)||'';
+ if(un||n==='NotSupportedError')return'A névjegyválasztás ebben az alkalmazásban vagy ezen a telefonon nem érhető el.';
+ if(n==='SecurityError')return'A rendszer biztonsági okból nem engedte megnyitni a névjegyválasztót (nem biztonságos oldal, nem a fő ablak, vagy hiányzott az érintés).';
+ if(n==='InvalidStateError')return'A névjegyválasztó már meg van nyitva, vagy most nem indítható. Várj egy pillanatot, majd próbáld újra.';
+ if(n==='NotAllowedError')return'A névjegyek megnyitását a rendszer vagy a böngésző megtagadta (engedély vagy blokkolás).';
+ if(n==='TypeError')return'A névjegyválasztó nem támogatja a kért adatokat (név, telefonszám) ezen az eszközön.';
+ return'A névjegyválasztó nem indult el (ismeretlen hiba).'}
+function ctBtns(inId,retry){return`<div class="btns"><button class="b2 sm" onclick="ctPaste('${inId}')">Beillesztés</button><button class="b2 sm" onclick="ctManual('${inId}')">Beírom kézzel</button>${retry?`<button class="b2 sm" onclick="pickContact('${inId}')">Újra</button>`:''}<button class="b2 sm" onclick="ctDetails('${inId}')">Részletek</button></div><div id="ctd-${inId}"></div>`}
+function ctFail(inId,e,un){ctLast=ctEnv(e).join('\n');
+ ctPanel(inId,`<div>${esc(ctMsg(e,un))}</div><div class="mu" style="margin-top:6px">Írd be a telefonszámot kézzel, vagy illeszd be a vágólapról.</div>`+ctBtns(inId,!un));
+ try{console.warn('Névjegyválasztó hiba',e)}catch(x){}}
+// a részletek (hibakód, üzenet, környezet) megtekinthetők és másolhatók; a getProperties külön jelzi, hogy a választó háttere válaszol-e
+async function ctDetails(inId){const box=$('#ctd-'+inId);if(!box)return;let t=ctLast||ctEnv(null).join('\n');
+ try{const c=navigator.contacts;if(c&&typeof c.getProperties==='function'){const p=await Promise.race([c.getProperties(),new Promise((_,no)=>setTimeout(()=>no(new Error('időtúllépés')),2000))]);t+='\ngetProperties: '+(Array.isArray(p)?p.join(','):String(p))}else t+='\ngetProperties: nincs'}
+ catch(x){t+='\ngetProperties hiba: '+((x&&x.name)||'?')+' / '+((x&&x.message)||'')}
+ ctLast=t;box.innerHTML=`<div class="ctd">${esc(t)}</div><div class="btns"><button class="b2 sm" onclick="ctCopy()">Másolás</button></div>`}
+function ctCopy(){const no=()=>toast('A másolás nem sikerült, jelöld ki és másold ki kézzel');try{navigator.clipboard.writeText(ctLast).then(()=>toast('Másolva'),no)}catch(e){no()}}
+function ctManual(inId){ctPanel(inId,'');const i=$('#'+inId);if(i)i.focus()}
+async function ctPaste(inId){let t='';
+ try{t=await navigator.clipboard.readText()}
+ catch(e){ctManual(inId);toast('A vágólap az appból nem olvasható. Tartsd nyomva a mezőt, és válaszd a Beillesztés lehetőséget.');return}
+ const m=String(t).match(/\+?\d[\d\s\-()\/]{6,}\d/);if(!m){toast('A vágólapon nincs telefonszám');return}
+ ctApply(inId,'',m[0].trim())}
+// a kiválasztott adat beírása: az üres mezőt kitölti, a már beírt nevet nem írja át, a más számot csak megerősítéssel cseréli
+function ctApply(inId,nm,tel){const pi=$('#'+inId),ci=$(inId==='dP'?'#dC':'#eC');if(!pi)return;
+ if(nm&&ci&&!ci.value.trim())ci.value=nm;
+ if(!tel){ctPanel(inId,'');toast(nm?'A névjegynek nincs telefonszáma':'Nincs telefonszám');return}
+ const cur=pi.value.trim();
+ if(!cur){pi.value=tel;ctPanel(inId,'');return}
+ if(ctDigits(cur)===ctDigits(tel)){ctPanel(inId,'');toast('Ez a telefonszám már be van írva');return}
+ ctPend[inId]=tel;
+ ctPanel(inId,`<div>A telefonszám mező már tartalmaz adatot: <b>${esc(cur)}</b>.<br>Felülírod a kiválasztott számmal: <b>${esc(tel)}</b>?</div><div class="btns"><button class="b2 sm" onclick="ctPanel('${inId}','')">Megtartom</button><button class="b1 sm" onclick="ctOver('${inId}')">Felülírom</button></div>`)}
+function ctOver(inId){const pi=$('#'+inId);if(pi&&ctPend[inId])pi.value=ctPend[inId];delete ctPend[inId];ctPanel(inId,'')}
+// a select() hívása közvetlenül az érintés kezelőjéből történik (előtte nincs await), így megmarad a felhasználói gesztus
+async function pickContact(inId){const now=Date.now();if(pcBusy&&now-pcBusy<4000)return;pcBusy=now;ctPanel(inId,'');
+ const c=navigator.contacts;
+ if(!c||typeof c.select!=='function'){pcBusy=0;ctFail(inId,{name:'NotSupportedError',message:'a navigator.contacts.select nem érhető el ebben a környezetben'},true);return}
+ toast('Névjegyek megnyitása… (nagy névjegylistánál a telefon lassan töltheti be)');
+ let done=false;const wd=setTimeout(()=>{if(done)return;ctLast=ctEnv({name:'NincsVálasz',message:'a select() 6 mp után sem tért vissza'}).join('\n');
+  ctPanel(inId,'<div>A névjegyválasztó még nem válaszolt. Ha nem látod a névjegyek listáját, használd az alábbi lehetőségeket.</div>'+ctBtns(inId,true))},6000);
+ try{
+  const r=await c.select(['name','tel'],{multiple:false});done=true;clearTimeout(wd);$('#toast').style.display='none';
+  if(!r||!r.length){ctPanel(inId,'');toast('Nem választottál névjegyet');return}
+  const nm=[].concat(r[0].name||[]).map(s=>String(s).trim()).find(Boolean)||'';
+  const tel=[...new Set([].concat(r[0].tel||[]).map(s=>String(s).trim()).filter(Boolean))].join(', ');
+  ctApply(inId,nm,tel)}
+ catch(e){done=true;clearTimeout(wd);$('#toast').style.display='none';if(e&&e.name==='AbortError'){ctPanel(inId,'');return}ctFail(inId,e)}
+ finally{pcBusy=0}}
 async function pastePhone(inId){try{const t=await navigator.clipboard.readText(),m=String(t).match(/\+?\d[\d\s\-()\/]{6,}\d/);if(m){$('#'+inId).value=m[0].trim();toast('Telefonszám beillesztve')}else toast('A vágólapon nincs telefonszám')}catch(e){toast('A vágólap nem érhető el')}}
 function nav(id){const a=byId(id);if(!a)return;if(a.lat==null){toast('Ehhez a megállóhoz nincs koordináta');return}
  const u={gm:`https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lon}&travelmode=driving`,wz:`https://waze.com/ul?ll=${a.lat},${a.lon}&navigate=yes`,geo:`geo:${a.lat},${a.lon}?q=${a.lat},${a.lon}(${encodeURIComponent(a.client||a.label)})`}[S.nav]||'';
@@ -280,7 +344,7 @@ async function newRoute(){if(!S.addrs.length){toast('Nincs törölnivaló útvon
 // ---------- megálló felvétele és szerkesztése ----------
 function stopSheet(x,id){const a=id?byId(id):null,d=a||x;XT=x;
  sheet(`<h3>${a?'Megálló szerkesztése':'Új megálló'}</h3><span class="lbl" style="margin-top:8px">Cím</span><textarea id="dA" rows="2">${esc(d.label)}</textarea>
-<span class="lbl">Vevő vagy vállalkozás neve</span><input id="dC" value="${esc(a?a.client:(x&&x.client)||'')}"><span class="lbl">Jegyzet</span><input id="dN" value="${esc(a?a.note||'':(x&&x.note)||'')}"><span class="lbl">Telefonszám</span><div class="in" style="margin-top:0"><input id="dP" type="tel" inputmode="tel" value="${esc(a?a.phone||'':(x&&x.phone)||'')}" placeholder="+36 30 123 4567"><button class="ib" onclick="pastePhone('dP')" aria-label="Beillesztés">${ico('paste',22)}</button>${(navigator.contacts&&navigator.contacts.select)?`<button class="ib" onclick="pickContact('dP')" aria-label="Névjegyek">${ico('book',22)}</button>`:''}</div>
+<span class="lbl">Vevő vagy vállalkozás neve</span><input id="dC" value="${esc(a?a.client:(x&&x.client)||'')}"><span class="lbl">Jegyzet</span><input id="dN" value="${esc(a?a.note||'':(x&&x.note)||'')}"><span class="lbl">Telefonszám</span><div class="in" style="margin-top:0"><input id="dP" type="tel" inputmode="tel" value="${esc(a?a.phone||'':(x&&x.phone)||'')}" placeholder="+36 30 123 4567"><button class="ib" onclick="pastePhone('dP')" aria-label="Beillesztés">${ico('paste',22)}</button><button class="ib" onclick="pickContact('dP')" aria-label="Névjegyek">${ico('book',22)}</button></div><div id="ct-dP" class="cterr" style="display:none"></div>
 <div class="mu" style="margin-top:10px;font-size:13px">${d.lat!=null?'A hely megvan':'Nincs koordináta, a lista végére kerül'}</div>
 <div class="btns"><button class="b2" onclick="closeSheet()">Mégse</button>${a?`<button class="b2" onclick="pickEdit('${a.id}')">${ico('pin',18)} Térképen</button>`:''}<button class="b1" onclick="stopSave('${id||''}')">${a?'Mentés':'Hozzáad'}</button></div>`)}
 const editStop=id=>stopSheet(null,id);
@@ -356,7 +420,7 @@ function selTog(id){SEL.has(id)?SEL.delete(id):SEL.add(id);renderBook()}
 function selClear(){SEL.clear();renderBook()}
 function selAdd(){let n=0;[...SEL].forEach(id=>{const b=S.book.find(v=>v.id===id);if(b){mkAddr(b,b.client,b.note,b.id);n++}});SEL.clear();save();go('route');toast(n+' megálló az útvonalon')}
 function editBook(id){const b=S.book.find(v=>v.id===id);if(!b)return;
- sheet(`<h3>Címjegyzék-bejegyzés</h3><span class="lbl" style="margin-top:8px">Cím</span><textarea id="eA" rows="2">${esc(b.label)}</textarea>${b.raw?`<div class="mu" style="font-size:12.5px;margin-top:6px">Beolvasott szöveg: ${esc(b.raw)}</div>`:''}<span class="lbl">Vevő vagy vállalkozás neve</span><input id="eC" value="${esc(b.client)}"><span class="lbl">Jegyzet</span><input id="eN" value="${esc(b.note)}"><span class="lbl">Telefonszám</span><div class="in" style="margin-top:0"><input id="eP" type="tel" inputmode="tel" value="${esc(b.phone||'')}" placeholder="+36 30 123 4567"><button class="ib" onclick="pastePhone('eP')" aria-label="Beillesztés">${ico('paste',22)}</button>${(navigator.contacts&&navigator.contacts.select)?`<button class="ib" onclick="pickContact('eP')" aria-label="Névjegyek">${ico('book',22)}</button>`:''}</div>
+ sheet(`<h3>Címjegyzék-bejegyzés</h3><span class="lbl" style="margin-top:8px">Cím</span><textarea id="eA" rows="2">${esc(b.label)}</textarea>${b.raw?`<div class="mu" style="font-size:12.5px;margin-top:6px">Beolvasott szöveg: ${esc(b.raw)}</div>`:''}<span class="lbl">Vevő vagy vállalkozás neve</span><input id="eC" value="${esc(b.client)}"><span class="lbl">Jegyzet</span><input id="eN" value="${esc(b.note)}"><span class="lbl">Telefonszám</span><div class="in" style="margin-top:0"><input id="eP" type="tel" inputmode="tel" value="${esc(b.phone||'')}" placeholder="+36 30 123 4567"><button class="ib" onclick="pastePhone('eP')" aria-label="Beillesztés">${ico('paste',22)}</button><button class="ib" onclick="pickContact('eP')" aria-label="Névjegyek">${ico('book',22)}</button></div><div id="ct-eP" class="cterr" style="display:none"></div>
 <div class="btns"><button class="b2 dg" onclick="bookDel('${id}')" aria-label="Törlés">${ico('trash',20)}</button><button class="b2" onclick="bookPick('${id}')">${ico('pin',18)} Térképen</button><button class="b1" onclick="bookSave('${id}')">Mentés</button></div>`)}
 async function bookSave(id){const b=S.book.find(v=>v.id===id),label=$('#eA').value.trim();if(!label)return;const ch=label!==b.label;closeSheet();
  Object.assign(b,{client:$('#eC').value.trim(),note:$('#eN').value.trim(),phone:$('#eP').value.trim(),label});
