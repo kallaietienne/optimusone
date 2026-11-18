@@ -7,13 +7,14 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Címsorrend</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
-:root{--bg:#0c0e11;--s1:#14171b;--s2:#1b1f25;--s3:#262b33;--ln:rgba(255,255,255,.08);--ln2:rgba(255,255,255,.16);--tx:#eef0f3;--mu:#8d97a5;--ac:#f4b740;--act:#f4b740;--acd:#1a1405;--gr:#4ade80;--bl:#7cb4ff;--rd:#ff7b72;--r:14px;--press:rgba(255,255,255,.1);--press2:rgba(255,255,255,.16);--bgA:rgba(12,14,17,.94);--pf:brightness(1.4);--toastbg:#f4f5f7;--toasttx:#0c0e11;color-scheme:dark}
-:root[data-theme="light"]{--bg:#f3f4f6;--s1:#ffffff;--s2:#ebedf1;--s3:#dde0e6;--ln:rgba(0,0,0,.1);--ln2:rgba(0,0,0,.2);--tx:#14171c;--mu:#5b6573;--ac:#f4b740;--act:#9a5b00;--acd:#1a1405;--gr:#17803f;--bl:#2a62c4;--rd:#cf3b30;--press:rgba(0,0,0,.07);--press2:rgba(0,0,0,.12);--bgA:rgba(243,244,246,.95);--pf:brightness(.86);--toastbg:#14171c;--toasttx:#f4f5f7;color-scheme:light}
+:root{--bg:#0c0e11;--s1:#14171b;--s2:#1b1f25;--s3:#262b33;--ln:rgba(255,255,255,.08);--ln2:rgba(255,255,255,.16);--tx:#eef0f3;--mu:#8d97a5;--ac:#f4b740;--acd:#1a1405;--gr:#4ade80;--bl:#7cb4ff;--rd:#ff7b72;--r:14px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 Roboto,-apple-system,"SF Pro Text","Segoe UI",system-ui,sans-serif;overflow:hidden;-webkit-text-size-adjust:100%}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;touch-action:manipulation;transition:transform .09s,filter .09s,background .12s}
-button:active,.p{transform:scale(.94);filter:var(--pf)}
+button:active,.p{transform:scale(.94);filter:brightness(1.4)}
 .i{display:block;flex:none}
 #app{height:100dvh;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
 main{flex:1;min-height:0;position:relative}
@@ -23,17 +24,17 @@ main{flex:1;min-height:0;position:relative}
 .sb{color:var(--mu);font-size:13px;margin-top:3px;font-variant-numeric:tabular-nums}
 .tools{display:flex}
 .ib{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--tx)}
-.ib:active,.ib.p{background:var(--press2);filter:none}.ib.on{color:var(--act)}
+.ib:active,.ib.p{background:rgba(255,255,255,.16);filter:none}.ib.on{color:var(--ac)}
 .prog{height:3px;background:var(--s2);margin:0 18px;border-radius:3px;overflow:hidden;flex:none}.prog i{display:block;height:100%;background:var(--ac);width:0;transition:width .35s}
 .scroll{flex:1;min-height:0;overflow:auto;padding:0 18px 28px;overscroll-behavior:contain}
 .b1,.b2{height:46px;padding:0 18px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600}
 .b1{background:var(--ac);color:var(--acd)}.b2{background:var(--s3);font-weight:500}
 .sm{height:40px;padding:0 14px;font-size:14px}.dg{color:var(--rd)}.b1.dg{background:var(--rd);color:#2a0a08}.wide{width:100%}
 input,textarea,select{width:100%;font:inherit;color:var(--tx);background:var(--s2);border:1px solid var(--ln);border-radius:12px;padding:13px 14px;outline:0}
-input:focus,textarea:focus,select:focus{border-color:var(--act)}
+input:focus,textarea:focus,select:focus{border-color:var(--ac)}
 textarea{resize:none}
 .in{display:flex;align-items:center;background:var(--s2);border:1px solid var(--ln);border-radius:14px;padding:0 4px 0 14px;margin-top:8px}
-.in input{border:0;background:none;padding:15px 8px}.in:focus-within{border-color:var(--act)}.in .i{color:var(--mu)}
+.in input{border:0;background:none;padding:15px 8px}.in:focus-within{border-color:var(--ac)}.in .i{color:var(--mu)}
 .in .rec{color:var(--rd);animation:pl 1s infinite}@keyframes pl{50%{opacity:.35}}
 .lbl{display:block;margin:18px 0 6px;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--mu)}
 .mu{color:var(--mu)}.c{text-align:center;padding:28px 8px}
@@ -42,12 +43,12 @@ textarea{resize:none}
 .calh{display:flex;align-items:center;justify-content:space-between;margin:4px 0 6px}.calh b{font-size:18px;font-weight:600}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.dw{text-align:center;font-size:12px;color:var(--mu);padding:6px 0}
 .cd{position:relative;aspect-ratio:1;border-radius:12px;font-size:15px;display:grid;place-items:center;color:var(--tx)}
-.cd.has{background:var(--s2);font-weight:600}.cd i{position:absolute;right:6px;bottom:3px;font-size:10px;font-style:normal;color:var(--act)}
+.cd.has{background:var(--s2);font-weight:600}.cd i{position:absolute;right:6px;bottom:3px;font-size:10px;font-style:normal;color:var(--ac)}
 .cd.today{box-shadow:inset 0 0 0 1px var(--bl)}.cd.sel{outline:2px solid var(--ac)}.nd.sk{border-style:dashed;color:var(--mu)}
 .stn{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ac);color:var(--acd);font-size:12px;font-weight:700;margin-right:8px;letter-spacing:0}
 .nbb{display:flex;gap:10px;margin-top:12px}.big{height:56px;font-size:17px}.b2.big{min-width:68px}.b2.ok{color:var(--gr)}
 .chip{display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:99px;background:var(--s3);color:var(--mu);margin:4px 4px 0 0}
-.chip.w{background:rgba(244,183,64,.14);color:var(--act)}.chip.g{background:rgba(74,222,128,.13);color:var(--gr)}
+.chip.w{background:rgba(244,183,64,.14);color:var(--ac)}.chip.g{background:rgba(74,222,128,.13);color:var(--gr)}
 .se{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin:6px 0 4px;padding:12px 14px;border:1px solid var(--ln);border-radius:var(--r);background:var(--s1)}
 .se .sg{flex:1;min-width:0}.se .lab{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)}
 .se b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.se .ar{color:var(--mu)}
@@ -57,13 +58,13 @@ textarea{resize:none}
 .tl{margin-top:10px}
 .sc{position:relative;display:flex;align-items:center;gap:8px;padding:20px 0 6px 52px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)}
 .sc::before{content:"";position:absolute;left:21px;top:0;bottom:0;width:2px;background:var(--ln2)}
-.sc em{font-style:normal;text-transform:none;letter-spacing:0;font-size:11px;color:var(--act);border:1px solid rgba(244,183,64,.45);padding:1px 9px;border-radius:99px}
+.sc em{font-style:normal;text-transform:none;letter-spacing:0;font-size:11px;color:var(--ac);border:1px solid rgba(244,183,64,.45);padding:1px 9px;border-radius:99px}
 .st{position:relative;display:grid;grid-template-columns:44px 1fr auto;align-items:center;background:var(--bg)}
 .st::before{content:"";position:absolute;left:21px;top:0;bottom:0;width:2px;background:var(--ln2)}
 .st.first::before{top:50%}.st.last::before{bottom:50%}
 .rl{position:relative;z-index:1;display:grid;place-items:center;height:100%}
 .nd{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:600;background:var(--bg);border:2px solid var(--ln2);color:var(--tx);font-variant-numeric:tabular-nums}
-.nd.fl{border-color:var(--bl);color:var(--bl)}.st.nx .nd,.nd.nx{background:var(--ac);border-color:var(--act);color:var(--acd)}
+.nd.fl{border-color:var(--bl);color:var(--bl)}.st.nx .nd,.nd.nx{background:var(--ac);border-color:var(--ac);color:var(--acd)}
 .st.dn .nd{border-color:var(--gr);color:var(--gr)}.st.dn .bd{opacity:.5}.st.dn .bd b{text-decoration:line-through}
 .st.br{padding-left:22px}.st.br::before{left:43px;background:rgba(244,183,64,.5)}
 .bd{padding:12px 6px;min-width:0}.bd b{display:block;font-weight:500;font-size:16px}.bd small{display:block;color:var(--mu);font-size:13.5px}
@@ -74,21 +75,19 @@ textarea{resize:none}
 .st.lift{z-index:5;background:var(--s2);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.55)}
 .gr{touch-action:none;width:44px;height:44px;display:grid;place-items:center;color:var(--mu)}
 .dgb{display:flex;align-items:center}
-#nextbar{flex:none;padding:10px 18px 12px;background:var(--bgA);border-top:1px solid var(--ln)}
+#nextbar{flex:none;padding:10px 18px 12px;background:rgba(12,14,17,.94);border-top:1px solid var(--ln)}
 .nb{display:flex;align-items:center;gap:12px}.nbt{flex:1;min-width:0}.nbt small{display:block;color:var(--mu);font-size:12px}
 .nbt b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tabs{display:flex;flex:none;border-top:1px solid var(--ln);background:var(--s1);padding-bottom:env(safe-area-inset-bottom)}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;color:var(--mu);font-size:11.5px;font-weight:500}.tab.on{color:var(--act)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;color:var(--mu);font-size:11.5px;font-weight:500}.tab.on{color:var(--ac)}
 .bkact{display:flex;gap:8px;flex-wrap:wrap;padding:6px 0 10px}
 .bk{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--ln)}
 .cb{width:44px;height:44px;display:grid;place-items:center;flex:none}
 .cb span{width:24px;height:24px;border-radius:7px;border:2px solid var(--ln2);display:grid;place-items:center;color:transparent}
-.cb.on span{background:var(--ac);border-color:var(--act);color:var(--acd)}
+.cb.on span{background:var(--ac);border-color:var(--ac);color:var(--acd)}
 .bk .t{flex:1;min-width:0;padding:8px 0}.bk b{display:block;font-weight:500}.bk small{display:block;color:var(--mu);font-size:13px}
 #bookbar{flex:none;padding:10px 18px 12px;border-top:1px solid var(--ln);background:var(--s1);display:none;gap:10px}#bookbar>*{flex:1}
 #map{flex:1;position:relative;background:#e9edf0}
-#map.dk .maplibregl-canvas{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.7)}
-.seg3{display:flex;background:var(--s2);border-radius:12px;padding:3px;gap:2px}.seg3 button{flex:1;height:40px;border-radius:9px;font-weight:500;font-size:14px}.seg3 button.on{background:var(--ac);color:var(--acd)}
 .mk{width:30px;height:30px;border-radius:50%;background:var(--ac);color:var(--acd);display:grid;place-items:center;font-size:13px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.45)}
 .mk.fl{background:var(--bl)}.mk.dn{background:var(--gr);color:#07210f}.mk.br{background:#fff;color:#1a1405}
 #pickbar{display:none;align-items:center;gap:10px;padding:10px 14px;background:rgba(244,183,64,.12);border-bottom:1px solid rgba(244,183,64,.4);font-size:14px;flex:none}#pickbar span{flex:1}
@@ -104,14 +103,14 @@ textarea{resize:none}
 .pbody{flex:1;overflow:auto;padding:4px 18px 24px}.pfoot{flex:none;padding:10px 18px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--ln)}
 .sw{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 2px;border-bottom:1px solid var(--ln)}
 .tg{width:50px;height:30px;border-radius:30px;background:var(--s3);position:relative;flex:none}.tg::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s}.tg.on{background:var(--ac)}.tg.on::after{left:23px}
-#toast{display:none;position:fixed;left:16px;right:16px;bottom:calc(86px + env(safe-area-inset-bottom));background:var(--toastbg);color:var(--toasttx);padding:12px 14px;border-radius:14px;gap:10px;align-items:center;z-index:70;box-shadow:0 8px 24px rgba(0,0,0,.5)}
-#toast button{flex:none;background:var(--toasttx);color:var(--toastbg);border-radius:9px;padding:8px 12px;font-weight:500}
+#toast{display:none;position:fixed;left:16px;right:16px;bottom:calc(86px + env(safe-area-inset-bottom));background:#f4f5f7;color:#0c0e11;padding:12px 14px;border-radius:14px;gap:10px;align-items:center;z-index:70;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+#toast button{flex:none;background:#0c0e11;color:#fff;border-radius:9px;padding:8px 12px;font-weight:500}
 .maplibregl-ctrl-attrib{font-size:10px}
 </style></head><body>
 <div id="app"><main>
 <section class="view on" id="v-route">
  <div class="hd"><div><h1>Mai út</h1><div class="sb" id="rt-sub"></div></div>
-  <div class="tools"><button class="ib" id="thb" onclick="toggleTheme()" aria-label="Világos vagy sötét téma"></button><button class="ib" id="eb" onclick="setEdit(!EDIT)" aria-label="Átrendezés"></button><button class="ib" onclick="routeMenu()" aria-label="Menü"></button></div></div>
+  <div class="tools"><button class="ib" id="eb" onclick="setEdit(!EDIT)" aria-label="Átrendezés"></button><button class="ib" onclick="routeMenu()" aria-label="Menü"></button></div></div>
  <div class="prog"><i id="rt-prog"></i></div>
  <div class="scroll" id="rt-body"></div>
  <div id="nextbar"></div>
@@ -123,7 +122,7 @@ textarea{resize:none}
  <div id="sug"></div><div id="quick"></div><div id="plan2"></div></div>
 </section>
 <section class="view" id="v-map">
- <div class="hd"><div><h1>Térkép</h1><div class="sb" id="mp-sub"></div></div><div class="tools"><button class="ib" id="mlay" onclick="mapOpts()" aria-label="Térkép megjelenítése"></button><button class="ib" id="mpin" onclick="pickNew()" aria-label="Új pont"></button><button class="ib" id="mloc" onclick="locateMe()" aria-label="Helyem"></button><button class="ib" id="mfit" onclick="mapDraw(true)" aria-label="Mind"></button></div></div>
+ <div class="hd"><div><h1>Térkép</h1><div class="sb" id="mp-sub"></div></div><div class="tools"><button class="ib" id="mpin" onclick="pickNew()" aria-label="Új pont"></button><button class="ib" id="mloc" onclick="locateMe()" aria-label="Helyem"></button><button class="ib" id="mfit" onclick="mapDraw(true)" aria-label="Mind"></button></div></div>
  <div id="pickbar"><span id="pickmsg"></span><button class="b2 sm" onclick="cancelPick()">Kész</button></div>
  <div id="map"></div><div id="msheet"></div>
 </section>
@@ -146,18 +145,15 @@ textarea{resize:none}
 <script>
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const MCSS=['https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css','https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css'];
-const loadCss=u=>new Promise((ok,no)=>{const l=document.createElement('link');l.rel='stylesheet';l.href=u;l.onload=ok;l.onerror=no;document.head.appendChild(l)});
 const MAPLIB=['https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js','https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js'];
 const TESS=['https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js','https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js'];
 var map=null,mapReady=false,markers=[],lastN=-1,pick=null,EDIT=false,TAB='route',SEL=new Set(),SRL=[],KS=[],XT=null,askRes=null,instEv=null,drag=null,lastTE=0;
-const VER='v17';
-const DEF=()=>({key:'',nav:'gm',width:0,back:false,start:null,end:null,addrs:[],order:[],lists:{},book:[],log:[],theme:'dark',mapMode:'auto',mapDone:true,mapLine:true,cur:'',sum:'',dirty:false,bId:''});
+const VER='v16';
+const DEF=()=>({key:'',nav:'gm',width:0,back:false,start:null,end:null,addrs:[],order:[],lists:{},book:[],log:[],cur:'',sum:'',dirty:false,bId:''});
 let S=Object.assign(DEF(),(()=>{try{return JSON.parse(localStorage.getItem('cs_state'))||{}}catch(e){return{}}})());
 S.lists=S.lists||{};S.addrs=S.addrs||[];S.order=S.order||[];S.book=S.book||[];S.log=S.log||[];
 S.addrs.forEach(a=>{if(!S.order.includes(a.id))S.order.push(a.id)});
-var saveWarned=false;
-const save=()=>{try{localStorage.setItem('cs_state',JSON.stringify(S))}catch(e){if(!saveWarned){saveWarned=true;toast('Nem sikerült menteni az adatokat (tele a tárhely?). Készíts exportot a Beállításokban.')}}};
+const save=()=>{try{localStorage.setItem('cs_state',JSON.stringify(S))}catch(e){}};
 const byId=id=>S.addrs.find(a=>a.id==id),ordList=()=>S.order.map(byId).filter(Boolean);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const hap=p=>{try{navigator.vibrate&&navigator.vibrate(p||20)}catch(e){}};
@@ -177,11 +173,11 @@ grip:'<g fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.4"/><circl
 up:'<path d="M6 14l6-6 6 6"/>',down:'<path d="M6 10l6 6 6-6"/>',chev:'<path d="M9 6l6 6-6 6"/>',back:'<path d="M15 6l-6 6 6 6"/>',
 flag:'<path d="M6 21V4M6 5h11l-2 4 2 4H6"/>',search:'<circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/>',trash:'<path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/>',
 paste:'<rect x="6" y="5" width="12" height="16" rx="2"/><path d="M9 5V4h6v1M9 11h6M9 15h6"/>',swap:'<path d="M8 5v14M8 5L5 8M8 5l3 3M16 19V5M16 19l-3-3M16 19l3-3"/>',
-loc:'<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',list:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6l.8.8L6.8 5M4.5 12l.8.8 1.5-1.8M4.5 18l.8.8 1.5-1.8"/>',cal:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>',moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',layers:'<path d="M12 4l9 5-9 5-9-5z"/><path d="M3 14l9 5 9-5"/>',fit:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',phone:'<path d="M6 4h3l1.5 4-2 1.3a10 10 0 0 0 5.2 5.2l1.5-2 4 1.5v3a2 2 0 0 1-2 2A13 13 0 0 1 4 6a2 2 0 0 1 2-2z"/>'};
+loc:'<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',list:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6l.8.8L6.8 5M4.5 12l.8.8 1.5-1.8M4.5 18l.8.8 1.5-1.8"/>',cal:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',fit:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',phone:'<path d="M6 4h3l1.5 4-2 1.3a10 10 0 0 0 5.2 5.2l1.5-2 4 1.5v3a2 2 0 0 1-2 2A13 13 0 0 1 4 6a2 2 0 0 1 2-2z"/>'};
 const ico=(n,s)=>`<svg class="i" width="${s||22}" height="${s||22}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
 function initIcons(){const set=(sel,n,s)=>{const e=$(sel);if(e)e.innerHTML=ico(n,s)};
  set('#eb','swap');set('.tools .ib[aria-label="Menü"]','more');set('#set2','sliders');set('#ic-s','search');set('#ic-s2','search');
- set('#mic','mic');set('#mic2','mic');set('#pinb','pin');set('#mpin','pin');set('#mloc','loc');set('#mlay','layers');set('#mfit','fit');set('#bcam','cam');set('#bpaste','paste');
+ set('#mic','mic');set('#mic2','mic');set('#pinb','pin');set('#mpin','pin');set('#mloc','loc');set('#mfit','fit');set('#bcam','cam');set('#bpaste','paste');
  const t=[['route','Út'],['map','Térkép'],['list','Tervezés'],['book','Címjegyzék'],['cal','Napló']];$$('#tabs .tab').forEach((b,i)=>{b.innerHTML=ico(t[i][0],24)+'<span>'+t[i][1]+'</span>'})}
 
 // ---------- alap felület: értesítés, lap, oldal, megerősítés ----------
@@ -308,7 +304,7 @@ async function rev(lat,lon){if(!S.key)return null;try{const r=await fetch(`https
  return ad?{label:ad.freeformAddress,city:ad.municipality||ad.localName||'Térképről',zip:ad.postalCode||''}:null}catch(e){return null}}
 function voice(inId){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R){toast('Ez a böngésző nem támogatja a hangbevitelt');return}
  const r=new R(),b=$(inId==='bq'?'#mic2':'#mic');r.lang='hu-HU';r.interimResults=false;if(b)b.classList.add('rec');
- r.onresult=e=>{const i=$('#'+inId);i.value=e.results[0][0].transcript;i.dispatchEvent(new Event('input',{bubbles:true}))};
+ r.onresult=e=>{const i=$('#'+inId);i.value=e.results[0][0].transcript;i.dispatchEvent(new Event('input'))};
  r.onerror=()=>toast('A hangfelismerés nem sikerült');r.onend=()=>{if(b)b.classList.remove('rec')};r.start()}
 
 // ---------- Hozzáadás ----------
@@ -407,12 +403,12 @@ function camShot(){const v=$('#camv');if(!camStream||!v||!v.videoWidth){toast('A
  const vw=v.videoWidth,vh=v.videoHeight,cw=v.clientWidth,ch=v.clientHeight,s=Math.max(cw/vw,ch/vh),ox=(vw*s-cw)/2,oy=(vh*s-ch)/2;
  const sx=(ox+cw*.04)/s,sy=(oy+ch*.06)/s,sw=cw*.92/s,sh=ch*.88/s,cv=document.createElement('canvas');cv.width=Math.round(sw);cv.height=Math.round(sh);
  cv.getContext('2d').drawImage(v,sx,sy,sw,sh,0,0,cv.width,cv.height);const ap=OCR_APPEND;OCR_APPEND=false;camStop();closePage();hap(30);ocrFlow(cv,ap)}
-function scanMenu(more){OCR_APPEND=!!more;sheet(`<h3>Címek beolvasása</h3>
+function scanMenu(){sheet(`<h3>Címek beolvasása</h3>
 <button class="opt" onclick="closeSheet();camOpen()">${ico('cam',22)} Fénykép a kamerával (kerettel)</button>
 <button class="opt" onclick="closeSheet();$('#camF').click()">${ico('cam',22)} Fénykép a telefon kamera-appjával</button>
 <button class="opt" onclick="closeSheet();$('#ocrF').click()">${ico('book',22)} Kép a galériából</button>
 <button class="opt" onclick="pasteDlg()">${ico('paste',22)} Szöveg beillesztése</button>`)}
-function ocrMore(){OCR_TXT=($('#ocrT')?$('#ocrT').value:OCR_TXT);scanMenu(true)}
+function ocrMore(){OCR_TXT=($('#ocrT')?$('#ocrT').value:OCR_TXT);OCR_APPEND=true;scanMenu()}
 // A képet több módon próbáljuk megnyitni: kicsinyítve dekódolva, eredeti méretben, majd <img> elemen keresztül
 async function decodeImg(file){
  if(file&&file.getContext)return file;
@@ -471,43 +467,21 @@ async function ocrAdd(){const ls=$('#ocrT').value.split('\n').map(s=>s.trim()).f
 // ---------- Térkép (MapLibre + TomTom stílus) ----------
 const loadScript=u=>new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
 async function loadAny(us,test){for(const u of us){if(test())return true;try{await loadScript(u)}catch(e){}}return test()}
-const TT_STYLE=n=>`https://api.tomtom.com/map/1/style/20.0.0-8/${n}.json?key=${encodeURIComponent(S.key)}&language=hu-HU`;
-var styleOkC={};
-async function styleOk(n){const k=n+S.key;if(k in styleOkC)return styleOkC[k];try{const r=await fetch(TT_STYLE(n));styleOkC[k]=r.ok}catch(e){styleOkC[k]=false}return styleOkC[k]}
-function mapWant(){const m=S.mapMode||'auto';return m==='auto'?(themeDark()?'dark':'light'):m}
-// sötét/műhold stílus: ha a kulcshoz nem érhető el, világos térkép marad (a sötétet szűrővel állítjuk elő)
-async function pickStyle(){const w=mapWant();let name='basic_main',filt=false,note='';
- if(w==='dark'){if(await styleOk('basic_night'))name='basic_night';else filt=true}
- else if(w==='sat'){if(await styleOk('hybrid_main'))name='hybrid_main';else note='sat'}
- return{name,filt,note}}
-async function applyMapStyle(){if(!map)return;const s=await pickStyle();$('#map').classList.toggle('dk',s.filt);
- if(s.note==='sat')toast('A műholdas réteg ezzel a kulccsal nem érhető el, világos térképet mutatok.');
- if(map._csName===s.name)return;map._csName=s.name;mapReady=false;map.setStyle(TT_STYLE(s.name))}
 async function ensureMap(){if(map)return true;
- if(!window.maplibregl){await loadCss(MCSS[0]).catch(()=>loadCss(MCSS[1])).catch(()=>{});await loadAny(MAPLIB,()=>!!window.maplibregl)}
+ if(!window.maplibregl){const c=document.createElement('link');c.rel='stylesheet';c.href='https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css';document.head.appendChild(c);await loadAny(MAPLIB,()=>!!window.maplibregl)}
  if(!window.maplibregl){$('#map').innerHTML='<p class="mu c">A térképhez internet kell.</p>';return false}
  if(!S.key){$('#map').innerHTML='<p class="mu c">Add meg a TomTom-kulcsot a Beállításokban.</p>';return false}
- $('#map').innerHTML='';const s0=await pickStyle();$('#map').classList.toggle('dk',s0.filt);
- map=new maplibregl.Map({container:'map',style:TT_STYLE(s0.name),center:[17.0,46.5],zoom:8,attributionControl:false});map._csName=s0.name;
+ map=new maplibregl.Map({container:'map',style:`https://api.tomtom.com/map/1/style/20.0.0-8/basic_main.json?key=${encodeURIComponent(S.key)}&language=hu-HU`,center:[17.0,46.5],zoom:8,attributionControl:false});
  map.addControl(new maplibregl.AttributionControl({compact:true}),'bottom-left');
- map.on('load',()=>{mapReady=true;mapDraw(true)});map.on('style.load',()=>{mapReady=true;mapDraw(false)});map.on('click',mapTap);
+ map.on('load',()=>{mapReady=true;mapDraw(true)});map.on('click',mapTap);
  map.on('error',()=>{if(Date.now()-lastTE>20000){lastTE=Date.now();toast('A térkép egy része nem töltődik. Nézd meg az Állapotot.')}});return true}
-function mapOpts(){const m=S.mapMode||'auto',b=(k,t)=>`<button class="${m===k?'on':''}" onclick="setMapMode('${k}')">${t}</button>`;
- sheet(`<h3>Térkép megjelenítése</h3><span class="lbl">Stílus</span><div class="seg3">${b('auto','Auto')}${b('light','Világos')}${b('dark','Sötét')}${b('sat','Műhold')}</div>
-<div class="mu" style="font-size:13px;margin-top:8px">Az Auto az app témáját követi. Ha a TomTom-kulcsod nem támogatja a sötét vagy műholdas stílust, a program a világos térképet használja (a sötétet szűrővel).</div>
-<div class="sw"><span>Kész megállók mutatása</span><button class="tg ${S.mapDone!==false?'on':''}" onclick="mapTog('mapDone')" aria-label="Kapcsoló"></button></div>
-<div class="sw"><span>Sorrendvonal mutatása</span><button class="tg ${S.mapLine!==false?'on':''}" onclick="mapTog('mapLine')" aria-label="Kapcsoló"></button></div>
-<div class="btns"><button class="b2" onclick="closeSheet()">Bezár</button></div>`)}
-function setMapMode(m){S.mapMode=m;save();applyMapStyle();mapOpts()}
-function mapTog(k){S[k]=(S[k]===false);save();mapDraw();mapOpts()}
-var mapFit=false;
-async function openMap(){const ok=await ensureMap();if(ok){map.resize();mapDraw(!mapFit);mapFit=true}}
+async function openMap(){const ok=await ensureMap();if(ok){map.resize();mapDraw(true)}}
 function mapDraw(fit){if(!map)return;markers.forEach(m=>m.remove());markers=[];const pts=[],line=[];
  const mk=(p,txt,cls,cb)=>{const el=document.createElement('div');el.className='mk '+cls;el.textContent=txt;el.onclick=ev=>{ev.stopPropagation();if(cb)cb()};markers.push(new maplibregl.Marker({element:el}).setLngLat([p.lon,p.lat]).addTo(map));pts.push([p.lon,p.lat])};
  if(S.start){mk(S.start,'A','fl',()=>toast('Rajt: '+S.start.label));line.push([S.start.lon,S.start.lat])}
- ordList().forEach((a,i)=>{if(a.lat==null)return;if(a.done&&S.mapDone===false)return;mk(a,a.done?'✓':i+1,(a.done?'dn ':'')+(a.det?'br':''),()=>showMS(a.id));if(!a.done)line.push([a.lon,a.lat])});
+ ordList().forEach((a,i)=>{if(a.lat==null)return;mk(a,a.done?'✓':i+1,(a.done?'dn ':'')+(a.det?'br':''),()=>showMS(a.id));if(!a.done)line.push([a.lon,a.lat])});
  const E=S.back?S.start:S.end;if(S.end&&!S.back)mk(S.end,'C','fl',()=>toast('Vég: '+S.end.label));if(E)line.push([E.lon,E.lat]);
- const gj=(line.length>1&&S.mapLine!==false)?{type:'Feature',geometry:{type:'LineString',coordinates:line},properties:{}}:{type:'FeatureCollection',features:[]};
+ const gj=line.length>1?{type:'Feature',geometry:{type:'LineString',coordinates:line},properties:{}}:{type:'FeatureCollection',features:[]};
  if(mapReady){const src=map.getSource('ord');if(src)src.setData(gj);else{map.addSource('ord',{type:'geojson',data:gj});map.addLayer({id:'ord',type:'line',source:'ord',paint:{'line-color':'#d97706','line-width':3,'line-dasharray':[2,2]}})}}
  $('#mp-sub').textContent=ordList().filter(a=>!a.done).length+' hátralévő megálló';
  if(pts.length&&(fit===true||pts.length!==lastN)){const b=new maplibregl.LngLatBounds(pts[0],pts[0]);pts.forEach(p=>b.extend(p));map.fitBounds(b,{padding:70,maxZoom:14,duration:0})}lastN=pts.length}
@@ -608,8 +582,7 @@ async function tripReuse(id){const t=S.log.find(x=>x.id===id);if(!t)return;
  if(!S.start&&t.start)S.start=t.start;if(!S.end&&t.end)S.end=t.end;S.dirty=true;save();closePage();go('route');toast(t.stops.length+' megálló az útvonalon')}
 
 // ---------- beállítások, állapot, mentés ----------
-function openSettings(){openPage('Beállítások',`<span class="lbl" style="margin-top:8px">Megjelenés</span><div class="seg3" id="thSeg">${themeSeg()}</div><div class="mu" style="font-size:13px;margin-top:6px">A térkép stílusát a Térkép oldalon, a réteg ikonnal állíthatod.</div>
-<span class="lbl">Navigációs alkalmazás</span><select id="navSel"><option value="gm">Google Maps</option><option value="wz">Waze</option><option value="geo">Alapértelmezett (Android választó)</option></select>
+function openSettings(){openPage('Beállítások',`<span class="lbl">Navigációs alkalmazás</span><select id="navSel"><option value="gm">Google Maps</option><option value="wz">Waze</option><option value="geo">Alapértelmezett (Android választó)</option></select>
 <span class="lbl">TomTom API-kulcs</span><input id="key" type="password" placeholder="API-kulcs" autocomplete="off"><div class="mu" style="font-size:13px;margin-top:6px">Csak ezen az eszközön tárolódik.</div>
 <span class="lbl">Folyosó szélessége (km)</span><input id="width" type="number" min="0" step="0.5"><div class="mu" style="font-size:13px;margin-top:6px">0 = automatikus. Ennél közelebbi település a folyosón van, a távolabbi ág.</div>
 <div class="btns"><button class="b1" onclick="setSave()">Mentés</button><button class="b2" onclick="testKey()">Kapcsolat tesztelése</button></div>
@@ -657,8 +630,6 @@ function proj(poly,q){let bd=Infinity,bs=0;const P=poly.P;
 function pickAlt(polys,pend,XY,T){let best=null,bk=null;polys.forEach(po=>{const cd={};let sum=0;pend.forEach(a=>{const d=proj(po,XY.get(a.id)).d;sum+=d;cd[a.city]=Math.min(cd[a.city]??Infinity,d)});
   const cov=Object.values(cd).filter(d=>d<=T).length,key=[-cov,sum,po.cum[po.cum.length-1]];
   if(!bk||key[0]<bk[0]||(key[0]===bk[0]&&(key[1]<bk[1]||(key[1]===bk[1]&&key[2]<bk[2])))){bk=key;best=po}});return best}
-const PSEUDO=new Set(['','?','Térképről','Koordinátából','Koordináta nélkül']);
-const ck=a=>(!a.city||PSEUDO.has(a.city))?'~'+Math.round(a.lat*25)+'_'+Math.round(a.lon*17):a.city;
 async function optimize(keep){const pend=S.addrs.filter(a=>!a.done&&a.lat!=null);
  if(!pend.length){toast('Nincs rendezhető cím (koordináta kell)');return}
  if(!S.start){toast('Előbb válaszd ki a rajtot (A)');openSE();return}
@@ -674,23 +645,23 @@ async function optimize(keep){const pend=S.addrs.filter(a=>!a.done&&a.lat!=null)
  // minden címnek: távolsága és helye (haladása) a két szakaszon; a közelebbi szakaszhoz tartozik, döntetlennél a kifelé úthoz
  const M=new Map();pend.forEach(a=>{const q=XY.get(a.id),p1=proj(po1,q),p2=po2?proj(po2,q):null,bk=!!p2&&p2.d+0.2<p1.d;
   M.set(a.id,{seg:bk?'back':'out',d:Math.min(p1.d,p2?p2.d:Infinity),s:bk?p2.s:p1.s})});
- const cityD={};pend.forEach(a=>{cityD[ck(a)]=Math.min(cityD[ck(a)]??Infinity,M.get(a.id).d)});
- const cor=pend.filter(a=>cityD[ck(a)]<=T),off=pend.filter(a=>cityD[ck(a)]>T);
+ const cityD={};pend.forEach(a=>{cityD[a.city]=Math.min(cityD[a.city]??Infinity,M.get(a.id).d)});
+ const cor=pend.filter(a=>cityD[a.city]<=T),off=pend.filter(a=>cityD[a.city]>T);
  // ágak: két település egy ágba kerül, ha közelebb van egymáshoz, mint a folyosóhoz
- const cities=[...new Set(off.map(a=>ck(a)))],uf={};cities.forEach(c=>uf[c]=c);const fd=c=>uf[c]===c?c:(uf[c]=fd(uf[c]));
- const cdist=(c1,c2)=>{let m=Infinity;off.forEach(a=>{if(ck(a)!==c1)return;off.forEach(b=>{if(ck(b)!==c2)return;const p=XY.get(a.id),q=XY.get(b.id);m=Math.min(m,Math.hypot(p.x-q.x,p.y-q.y))})});return m};
+ const cities=[...new Set(off.map(a=>a.city))],uf={};cities.forEach(c=>uf[c]=c);const fd=c=>uf[c]===c?c:(uf[c]=fd(uf[c]));
+ const cdist=(c1,c2)=>{let m=Infinity;off.forEach(a=>{if(a.city!==c1)return;off.forEach(b=>{if(b.city!==c2)return;const p=XY.get(a.id),q=XY.get(b.id);m=Math.min(m,Math.hypot(p.x-q.x,p.y-q.y))})});return m};
  for(let i=0;i<cities.length;i++)for(let j=i+1;j<cities.length;j++)if(cdist(cities[i],cities[j])<Math.min(cityD[cities[i]],cityD[cities[j]]))uf[fd(cities[i])]=fd(cities[j]);
- const cl={};off.forEach(a=>(cl[fd(ck(a))]=cl[fd(ck(a))]||[]).push(a));
+ const cl={};off.forEach(a=>(cl[fd(a.city)]=cl[fd(a.city)]||[]).push(a));
  const br=Object.values(cl).map(mem=>{const e=mem.reduce((m,a)=>M.get(a.id).d<M.get(m.id).d?a:m,mem[0]),me=M.get(e.id),q=XY.get(e.id);
   mem.sort((a,b)=>{const pa=XY.get(a.id),pb=XY.get(b.id);return Math.hypot(pb.x-q.x,pb.y-q.y)-Math.hypot(pa.x-q.x,pa.y-q.y)}); // a legtávolabbi címtől indulunk, a visszatérés felé
-  return{seg:me.seg,key:me.s,mem,name:[...new Set(mem.map(a=>(!a.city||PSEUDO.has(a.city))?'térképi pont':a.city))].join(', ')}});
+  return{seg:me.seg,key:me.s,mem,name:[...new Set(mem.map(a=>a.city))].join(', ')}});
  const build=seg=>{const en=[];cor.filter(a=>M.get(a.id).seg===seg).forEach(a=>en.push({key:M.get(a.id).s,t:0,ids:[a.id]}));
   br.filter(b=>b.seg===seg).forEach(b=>en.push({key:b.key,t:1,ids:b.mem.map(a=>a.id)}));
   en.sort((x,y)=>x.key-y.key||x.t-y.t);return en.flatMap(e=>e.ids)};
  let ord=[...build('out'),...build('back')];
  pend.forEach(a=>{a.reg=0;a.det=false;a.warn='';a.role=''});
  cor.forEach(a=>{a.role=M.get(a.id).seg==='out'?'folyosó · kifelé':'folyosó · vissza'});
- br.forEach(b=>b.mem.forEach(a=>{a.det=true;a.role='ág: '+b.name;if(cityD[ck(a)]<=2.5*T)a.warn='ág vagy folyosó?'}));
+ br.forEach(b=>b.mem.forEach(a=>{a.det=true;a.role='ág: '+b.name;if(cityD[a.city]<=2.5*T)a.warn='ág vagy folyosó?'}));
  if(keep){const cur=S.order.filter(id=>pend.some(a=>a.id==id)),locked=new Map();cur.forEach((id,i)=>{if(byId(id).lock)locked.set(i,id)});
   const lk=[...locked.values()],free=ord.filter(id=>!lk.includes(id));ord=cur.map((_,i)=>locked.has(i)?locked.get(i):free.shift())}
  else S.addrs.forEach(a=>a.lock=false);
@@ -701,21 +672,6 @@ function finishOrder(ord){const done=S.order.filter(id=>byId(id)&&byId(id).done)
 
 
 
-function themeDark(){const t=S.theme||'dark';return t==='dark'||(t==='auto'&&!!(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches))}
-function applyTheme(){const d=themeDark();document.documentElement.setAttribute('data-theme',d?'dark':'light');const m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',d?'#0c0e11':'#f3f4f6');
- const b=$('#thb');if(b)b.innerHTML=ico(d?'sun':'moon',22);if(map&&(S.mapMode||'auto')==='auto')applyMapStyle()}
-function toggleTheme(){S.theme=themeDark()?'light':'dark';save();applyTheme();hap(20)}
-function themeSeg(){const t=S.theme||'dark';return [['auto','Auto'],['dark','Sötét'],['light','Világos']].map(([k,l])=>`<button class="${t===k?'on':''}" onclick="setTheme('${k}')">${l}</button>`).join('')}
-function setTheme(t){S.theme=t;save();applyTheme();const e=$('#thSeg');if(e)e.innerHTML=themeSeg()}
-if(window.matchMedia){try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if((S.theme||'dark')==='auto')applyTheme()})}catch(e){}}
-// Android Vissza gomb: előbb bezárja a lapot vagy oldalt, majd az Útra lép, és csak kétszeri nyomásra lép ki
-(function(){if(!(window.history&&history.pushState))return;let last=0;history.replaceState({s:0},'');history.pushState({s:1},'');
- window.addEventListener('popstate',()=>{const re=()=>history.pushState({s:1},'');
-  if($('#sheet').classList.contains('on')){closeSheet();re();return}
-  if($('#page').classList.contains('on')){closePage();re();return}
-  if(pick){cancelPick();re();return}
-  if(TAB!=='route'){go('route');re();return}
-  if(Date.now()-last<2000){history.back();return}last=Date.now();toast('A kilépéshez nyomd meg még egyszer a Vissza gombot');re()})})();
-initIcons();applyTheme();go('route');
+initIcons();go('route');
 
 </script></body></html>
